@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fishing World</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="game-container">
+
+        <header class="top-bar">
+            <h1>🎣 FISHING WORLD</h1>
+            <div class="player-info">
+                <span>👤 Người chơi: Guest</span>
+                <span>🪙 100 Gold</span>
+            </div>
+        </header>
+
+        <main class="game-screen">
+            <canvas id="gameCanvas" width="960" height="600">
+            </canvas>
+
+            <div class="game-message" id="message">
+                Chào mừng đến Fishing World!
+            </div>
+
+            
+            <div class="fishing-ui" id="fishingUI">
+
+                <div id="fishingStatus">
+                    🎣 Đang chờ cá...
+                </div>
+
+                <div id="fishingTimer"></div>
+
+                <div id="timingGame" class="timing-game">
+
+                    <div class="timing-label">
+                        <span>CANH THỜI ĐIỂM!</span>
+
+                        <span id="timingScore">0 / 3</span>
+
+                        <span id="comboText">🔥 Combo x0</span>
+                    </div>
+
+                    <div class="timing-track" id="timingTrack">
+
+                        <div class="timing-target" id="target0"></div>
+                        <div class="timing-target" id="target1"></div>
+                        <div class="timing-target" id="target2"></div>
+                        <div class="timing-target" id="target3"></div>
+
+                        <div class="timing-marker" id="timingMarker"></div>
+
+                    </div>
+
+                    <div class="timing-hint">
+                        Nhấn SPACE khi vạch đỏ nằm trong vùng màu xanh!
+                    </div>
+
+                </div>
+
+                <div id="fishJumpEffect" class="fish-jump-effect">
+                    <canvas id="fishJumpCanvas"
+                            width="120"
+                            height="90">
+                    </canvas>
+                </div>
+            </div>
+
+
+            <div class="fish-inventory">
+                🐟 Cá đã câu: <span id="fishCount">0</span>
+                <span> | </span>
+                🪙 Vàng: <span id="gold">100</span>
+            </div>
+        </main>
+
+        <footer class="bottom-bar">
+            <div>W A S D / ← ↑ → ↓ : Di chuyển</div>
+            <div>🎣 Fishing World - Version 0.1</div>
+        </footer>
+
+        <!-- Nút mở túi cá -->
+        <button id="inventoryBtn" class="inventory-btn">
+            🎒 Túi cá (<span id="inventoryCount">0</span>)
+        </button>
+
+        <!-- Cửa sổ túi cá -->
+        <div id="inventoryUI" class="inventory-ui">
+            <div class="inventory-header">
+                <h2>🎒 TÚI CÁ</h2>
+                <button id="closeInventory">✖</button>
+            </div>
+
+            <div class="inventory-info">
+                🐟 Cá: <span id="inventoryTotal">0</span>
+                <span>🪙 Vàng: <span id="inventoryGold">100</span></span>
+            </div>
+
+            <div id="fishListUI" class="fish-list">
+                Chưa có cá nào!
+            </div>
+
+            <div class="inventory-footer">
+                <button id="sellAllBtn">Bán tất cả cá</button>
+            </div>
+        </div>
+
+    </div>
+
+    
+
+    <script type="module" src="js/core/Game.js"></script>
+</body>
+</html>
