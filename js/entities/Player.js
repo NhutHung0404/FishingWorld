@@ -11,27 +11,27 @@ export class Player {
         this.direction = "down";
     }
 
-    move(keys, deltaTime, canMoveTo) {
+    move(input, deltaTime, canMoveTo) {
 
     let dx = 0;
     let dy = 0;
 
-    if (keys["w"] || keys["arrowup"]) {
+    if (input.isPressed("w") || input.isPressed("arrowup")) {
         dy--;
         this.direction = "up";
     }
 
-    if (keys["s"] || keys["arrowdown"]) {
+    if (input.isPressed("s") || input.isPressed("arrowdown")) {
         dy++;
         this.direction = "down";
     }
 
-    if (keys["a"] || keys["arrowleft"]) {
+    if (input.isPressed("a") || input.isPressed("arrowleft")) {
         dx--;
         this.direction = "left";
     }
 
-    if (keys["d"] || keys["arrowright"]) {
+    if (input.isPressed("d") || input.isPressed("arrowright")) {
         dx++;
         this.direction = "right";
     }

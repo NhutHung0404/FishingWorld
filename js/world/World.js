@@ -41,6 +41,7 @@ export class World {
             { x: 1100, y: 150 }
         ];
     }
+
     drawGrass(ctx) {
 
     ctx.fillStyle = "#70a85c";
@@ -73,5 +74,129 @@ export class World {
         ctx.fillStyle = "#4e914d";
         ctx.fillRect(x, y, 4, 4);
     }
+    }
+
+    drawLake(ctx) {
+
+    // Bo ho
+    ctx.fillStyle = "#b3a06b";
+
+    ctx.beginPath();
+    ctx.ellipse(
+        this.lake.x,
+        this.lake.y,
+        this.lake.rx + 10,
+        this.lake.ry + 10,
+        0, 0, Math.PI * 2
+    );
+    ctx.fill();
+
+    // Mat nuoc
+    ctx.fillStyle = "#399bb5";
+
+    ctx.beginPath();
+    ctx.ellipse(
+        this.lake.x,
+        this.lake.y,
+        this.lake.rx,
+        this.lake.ry,
+        0, 0, Math.PI * 2
+    );
+    ctx.fill();
+
+    // Song nuoc
+    for (let i = 0; i < 40; i++) {
+
+        const x = this.lake.x - 350 + (i * 73) % 700;
+        const y = this.lake.y - 170 + (i * 47) % 340;
+
+        if (this.isWater(x, y)) {
+            ctx.fillStyle = "#70c7d4";
+            ctx.fillRect(x, y, 18, 3);
+        }
+    }
+    }
+
+    isWater(x, y) {
+
+        const dx = (x - this.lake.x) / this.lake.rx;
+        const dy = (y - this.lake.y) / this.lake.ry;
+        return dx * dx + dy * dy < 1;
+    }
+
+    onDock(x, y) {
+    return (
+        x >= this.dock.x &&
+        x <= this.dock.x + this.dock.width &&
+        y >= this.dock.y &&
+        y <= this.dock.y + this.dock.height
+    );
+    }
+
+    drawDock(ctx) {
+    const dock = this.dock;
+
+    ctx.fillStyle = "#8b5a2b";
+    ctx.fillRect(
+        dock.x,
+        dock.y,
+        dock.width,
+        dock.height
+    );
+
+    ctx.strokeStyle = "#5c371d";
+    ctx.lineWidth = 3;
+
+    for (let y = dock.y; y < dock.y + dock.height; y += 24) {
+        ctx.beginPath();
+        ctx.moveTo(dock.x, y);
+        ctx.lineTo(dock.x + dock.width, y);
+        ctx.stroke();
+    }
+    }
+
+    drawTrees(ctx) {
+    for (const tree of this.trees) {
+        // Thân cây
+        ctx.fillStyle = "#70452b";
+        ctx.fillRect(tree.x - 8, tree.y, 16, 24);
+
+        // Tán cây
+        ctx.fillStyle = "#286b3a";
+        ctx.fillRect(tree.x - 24, tree.y - 32, 48, 40);
+
+        ctx.fillStyle = "#3d914d";
+        ctx.fillRect(tree.x - 16, tree.y - 40, 32, 32);
+    }
+    }
+
+    isTreeCollision(x, y) {
+    for (const tree of this.trees) {
+        const dx = x - tree.x;
+        const dy = y - tree.y;
+
+        if (Math.sqrt(dx * dx + dy * dy) < 28) {
+            return true;
+        }
+    }
+
+    return false;
+    }
+
+    isNearLake(x, y, distance = 200) {
+    const dx = x - this.lake.x;
+    const dy = y - this.lake.y;
+
+    return Math.sqrt(dx * dx + dy * dy) < distance;
+    }
+
+    isNearDock(x, y) {
+    const centerX = this.dock.x + this.dock.width / 2;
+    const centerY = this.dock.y + this.dock.height / 2;
+
+    return (
+        Math.abs(x - centerX) < this.dock.width / 2 + 15 &&
+        Math.abs(y - centerY) < this.dock.height / 2 + 15
+    );
     }
 }

@@ -9,7 +9,9 @@ import { Player } from "../entities/Player.js";
 import { Camera } from "./Camera.js";
 import { FishingRod } from "../fishing/FishingRod.js";
 import { World } from "../world/World.js";
+import { Input } from "./Input.js";
 
+const input = new Input();
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const fishingSystem = new FishingSystem();
@@ -22,8 +24,6 @@ ctx.imageSmoothingEnabled = false;
 // ==============================
 
 const world = new World();
-const TILE = 32;
-
 const player = new Player(900, 760);
 const fishingRod = new FishingRod();
 
@@ -32,58 +32,6 @@ const camera = new Camera(
     world.width,
     world.height
 );
-
-const { lake, dock, trees } = world;
-const keys = {};
-
-window.addEventListener("keydown", (e) => {
-    const key = e.key.toLowerCase();
-
-    if ([
-        "w", "a", "s", "d",
-        "arrowup", "arrowdown",
-        "arrowleft", "arrowright"
-    ].includes(key)) {
-        e.preventDefault();
-    }
-
-    keys[key] = true;
-});
-
-window.addEventListener("keyup", (e) => {
-    keys[e.key.toLowerCase()] = false;
-});
-
-window.addEventListener("blur", () => {
-    for (const key in keys) {
-        keys[key] = false;
-    }
-});
-
-// ==============================
-// 5. KIEM TRA HO NUOC
-// ==============================
-
-function isWater(x, y) {
-    const dx = (x - lake.x) / lake.rx;
-    const dy = (y - lake.y) / lake.ry;
-
-    return dx * dx + dy * dy < 1;
-}
-
-// Kiem tra mot diem co nam tren ben go khong
-function onDock(x, y) {
-    return (
-        x >= dock.x &&
-        x <= dock.x + dock.width &&
-        y >= dock.y &&
-        y <= dock.y + dock.height
-    );
-}
-
-// ==============================
-// 6. KIEM TRA VA CHAM
-// ==============================
 
 function canMoveTo(x, y) {
 
@@ -108,167 +56,27 @@ function canMoveTo(x, y) {
     for (const [px, py] of points) {
 
         // Khong cho di xuong nuoc
-        if (isWater(px, py) && !onDock(px, py)) {
+        if (world.isWater(px, py) && !world.onDock(px, py)) {
             return false;
         }
     }
-
-    // Kiem tra va cham voi cay
-    for (const tree of trees) {
-        const dx = x - tree.x;
-        const dy = y - tree.y;
-
-        if (Math.sqrt(dx * dx + dy * dy) < 28) {
-            return false;
-        }
+    if (world.isTreeCollision(x, y)) {
+        return false;
     }
-
     return true;
 }
 
-// ==============================
-// 7. CAP NHAT NHAN VAT
-// ==============================
-
 function update(deltaTime) {
-    player.move(keys, deltaTime, canMoveTo);
+    player.move(input, deltaTime, canMoveTo);
 }
-// ==============================
-// 8. CAMERA THEO NHAN VAT
-// ==============================
 
 function updateCamera() {camera.follow(player);}
-// ==============================
-// 10. VE HO NUOC
-// ==============================
-
-function drawLake() {
-
-    // Bo ho
-    ctx.fillStyle = "#b3a06b";
-
-    ctx.beginPath();
-    ctx.ellipse(
-        lake.x, lake.y,
-        lake.rx + 10,
-        lake.ry + 10,
-        0, 0, Math.PI * 2
-    );
-    ctx.fill();
-
-    // Mat nuoc
-    ctx.fillStyle = "#399bb5";
-
-    ctx.beginPath();
-    ctx.ellipse(
-        lake.x, lake.y,
-        lake.rx,
-        lake.ry,
-        0, 0, Math.PI * 2
-    );
-    ctx.fill();
-
-    // Song nuoc
-    for (let i = 0; i < 40; i++) {
-
-        const x = lake.x - 350 + (i * 73) % 700;
-        const y = lake.y - 170 + (i * 47) % 340;
-
-        if (isWater(x, y)) {
-            ctx.fillStyle = "#70c7d4";
-            ctx.fillRect(x, y, 18, 3);
-        }
-    }
-}
-
-// ==============================
-// 11. VE BEN GO
-// ==============================
-
-function drawDock() {
-
-    ctx.fillStyle = "#79502e";
-
-    ctx.fillRect(
-        dock.x,
-        dock.y,
-        dock.width,
-        dock.height
-    );
-
-    for (
-        let y = dock.y;
-        y < dock.y + dock.height;
-        y += 18
-    ) {
-
-        ctx.fillStyle = "#b47b48";
-
-        ctx.fillRect(
-            dock.x,
-            y,
-            dock.width - 2,
-            15
-        );
-
-        ctx.fillStyle = "#634026";
-
-        ctx.fillRect(
-            dock.x,
-            y + 15,
-            dock.width - 2,
-            3
-        );
-    }
-}
 
 // ==============================
 // 12. VE CAY
 // ==============================
 
-function drawTrees() {
 
-    trees.forEach(tree => {
-
-        // Bong cay
-        ctx.fillStyle = "#315c38";
-        ctx.fillRect(
-            tree.x - 16,
-            tree.y - 4,
-            32, 25
-        );
-
-        // Than cay
-        ctx.fillStyle = "#80502e";
-        ctx.fillRect(
-            tree.x - 5,
-            tree.y + 5,
-            10, 23
-        );
-
-        // Tan cay
-        ctx.fillStyle = "#347b43";
-        ctx.fillRect(
-            tree.x - 20,
-            tree.y - 20,
-            40, 25
-        );
-
-        ctx.fillStyle = "#55a64f";
-        ctx.fillRect(
-            tree.x - 14,
-            tree.y - 25,
-            28, 20
-        );
-
-        ctx.fillStyle = "#80c95e";
-        ctx.fillRect(
-            tree.x - 5,
-            tree.y - 20,
-            8, 6
-        );
-    });
-}
 
 // Ve phao cau ca
 function drawFishing() {
@@ -349,13 +157,12 @@ function render() {
 
     // Camera dich chuyen theo nhan vat
     ctx.save();
-
     ctx.translate(-camera.x, -camera.y);
 
     world.drawGrass(ctx);
-    drawLake();
-    drawDock();
-    drawTrees();
+    world.drawLake(ctx);
+    world.drawDock(ctx);
+    world.drawTrees(ctx);
     player.draw(ctx);
     fishingRod.draw(ctx, player);
     drawFishing();
@@ -386,6 +193,7 @@ function gameLoop(timestamp) {
 
     camera.follow(player);
     render();
+    input.update();
 
     requestAnimationFrame(gameLoop);
 }
@@ -529,22 +337,7 @@ function showMessage(text) {
 
 // Kiem tra nguoi choi co gan ben cau ca
 function nearFishingSpot() {
-    const centerX = dock.x + dock.width / 2;
-    const centerY = dock.y + dock.height / 2;
-
-    return (
-        Math.abs(player.x - centerX) < dock.width / 2 + 15 &&
-        Math.abs(player.y - centerY) < dock.height / 2 + 15
-    );
-}
-
-function isNearFishingSpot() {
-    const dx = player.x - lake.x;
-    const dy = player.y - lake.y;
-
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    return distance < 120;
+    return world.isNearDock(player.x, player.y);
 }
 
 // Bat dau cau ca
@@ -554,12 +347,12 @@ function startFishing() {
         return;
     }
 
-    if (!nearFishingSpot()) {
+    if (!world.isNearDock(player.x, player.y)) {
         showMessage("Hãy đến gần hồ để câu cá!");
         return;
     }
 
-    const started = fishingSystem.startFishing(lake);
+    const started = fishingSystem.startFishing(world.lake);
 
     if (!started) return;
 
@@ -726,7 +519,7 @@ function updateFishing(deltaTime) {
     if (!fishingSystem.isActive()) return;
 
     // Kiểm tra người chơi có rời khỏi hồ không
-    if (!isNearFishingSpot()) {
+    if (!world.isNearLake(player.x, player.y)) {
         resetFishing();
         showMessage("Bạn đã rời khỏi khu vực câu cá!");
         return;
