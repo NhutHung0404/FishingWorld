@@ -1,0 +1,366 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #17251f;
+    color: white;
+    font-family: Arial, sans-serif;
+
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-container {
+    width: 1000px;
+    max-width: 96%;
+    background: #263c30;
+    border: 4px solid #71936a;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px #0008;
+}
+
+.top-bar {
+    padding: 15px 20px;
+    background: #355b40;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.top-bar h1 {
+    font-size: 22px;
+    color: #ffe8a3;
+}
+
+.player-info {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+}
+
+.game-screen {
+    position: relative;
+    width: 100%;
+    background: #568b55;
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+}
+
+.game-message {
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    background: #1d3029dd;
+    padding: 10px 20px;
+    border: 2px solid #b5d99c;
+    border-radius: 8px;
+
+    font-size: 14px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.bottom-bar {
+    background: #355b40;
+    padding: 15px 20px;
+
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #e2efcf;
+}
+
+@media (max-width: 600px) {
+    .top-bar {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .player-info {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .bottom-bar {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Giao dien cau ca */
+
+.fishing-ui {
+    display: none;
+    position: absolute;
+    top: 65px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    min-width: 220px;
+    padding: 14px 20px;
+
+    background: #183d39eF;
+    border: 2px solid #9bd7c1;
+    border-radius: 10px;
+
+    text-align: center;
+    color: white;
+    font-weight: bold;
+    z-index: 5;
+}
+
+#fishingTimer {
+    margin-top: 8px;
+    color: #ffe38a;
+}
+
+.fish-inventory {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+
+    padding: 10px 14px;
+    background: #183d39dd;
+    border: 2px solid #9bd7c1;
+    border-radius: 8px;
+
+    color: white;
+    font-size: 13px;
+    z-index: 5;
+}
+
+/* MINI GAME KEO CA */
+
+.timing-game {
+    display: none;
+    margin-top: 15px;
+    width: 320px;
+    max-width: 75vw;
+}
+
+.timing-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    color: #ffe28a;
+    font-size: 13px;
+}
+
+.timing-track {
+    position: relative;
+    width: 100%;
+    height: 34px;
+
+    background: #263b38;
+    border: 2px solid #d5e5d0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* Cac vung muc tieu */
+.timing-target {
+    position: absolute;
+    top: 0;
+    height: 100%;
+
+    background: #62c77a;
+    border-left: 1px solid #d9ffd9;
+    border-right: 1px solid #d9ffd9;
+
+    opacity: 0.9;
+}
+
+.timing-target.hit {
+    background: #ffe071;
+    opacity: 1;
+}
+
+/* Truc chay */
+.timing-marker {
+    position: absolute;
+    top: -3px;
+    left: 0;
+
+    width: 4px;
+    height: 38px;
+
+    background: #ff4545;
+    box-shadow: 0 0 7px #ff4545;
+
+    z-index: 3;
+    pointer-events: none;
+}
+
+.timing-hint {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #d7e9dc;
+    line-height: 1.5;
+}
+
+#timingScore {
+    color: #ffffff;
+    font-weight: bold;
+}
+.inventory-btn {
+    padding: 10px 15px;
+    background: #d99b45;
+    color: white;
+    border: 2px solid #754a27;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.inventory-ui {
+    display: none;
+    position: absolute;
+    z-index: 10;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 420px;
+    max-width: 90%;
+    padding: 18px;
+    background: #263d35;
+    border: 4px solid #d9ae69;
+    border-radius: 10px;
+    color: white;
+    box-shadow: 0 0 20px #0009;
+}
+
+.inventory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #d9ae69;
+    margin-bottom: 12px;
+}
+
+.inventory-header h2 {
+    font-size: 20px;
+}
+
+.inventory-header button {
+    background: #bd4848;
+    color: white;
+    border: none;
+    padding: 7px 10px;
+    cursor: pointer;
+}
+
+.inventory-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    color: #ffe28a;
+}
+
+.fish-list {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.fish-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #3c594b;
+    border: 1px solid #78977c;
+    border-radius: 5px;
+}
+
+.fish-item button {
+    background: #d99b45;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 7px;
+    cursor: pointer;
+}
+
+.inventory-footer {
+    margin-top: 15px;
+    text-align: center;
+}
+
+#sellAllBtn {
+    padding: 10px 18px;
+    background: #e1a33e;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+/* Hiệu ứng giật cần câu */
+.rod-jerk {
+    animation: rodJerk 0.25s ease;
+}
+
+@keyframes rodJerk {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px) rotate(-1deg); }
+    50% { transform: translateX(5px) rotate(1deg); }
+    75% { transform: translateX(-3px); }
+    100% { transform: translateX(0); }
+}
+
+/* Cá nhảy khỏi mặt nước */
+.fish-jump-effect {
+    display: none;
+    position: absolute;
+
+    /* Đưa cá xuống dưới thông báo */
+    left: 50%;
+    top: 110px;
+
+    font-size: 35px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.fish-jump {
+    display: block;
+    animation: fishJump 0.8s ease-out;
+}
+
+@keyframes fishJump {
+    0% {
+        transform: translate(-50%, 30px) rotate(0);
+        opacity: 0;
+    }
+
+    40% {
+        transform: translate(-50%, -35px) rotate(-25deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, 30px) rotate(25deg);
+        opacity: 0;
+    }
+}
+#fishingStatus,
+#fishingTimer {
+    position: relative;
+    z-index: 5;
+}
