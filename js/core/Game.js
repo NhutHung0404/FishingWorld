@@ -1,545 +1,618 @@
+import { EventBus } from "./EventBus.js";
+import { GameState } from "./GameState.js";
+import { Camera } from "./Camera.js";
+import { Input } from "./Input.js";
+import { World } from "../world/World.js";
+import { Player } from "../entities/Player.js";
+import { FishingRod } from "../fishing/FishingRod.js";
 import { FishingSystem } from "../fishing/FishingSystem.js";
 import { FishingMiniGame } from "../fishing/FishingMiniGame.js";
-import { FishingUI } from "../ui/FishingUI.js";
 import { Inventory } from "../systems/Inventory.js";
 import { AudioManager } from "../systems/AudioManager.js";
-import { InventoryUI } from "../ui/InventoryUI.js";
 import { EffectManager } from "../systems/EffectManager.js";
-import { Player } from "../entities/Player.js";
-import { Camera } from "./Camera.js";
-import { FishingRod } from "../fishing/FishingRod.js";
-import { World } from "../world/World.js";
-import { Input } from "./Input.js";
+import { TimeManager } from "../systems/TimeManager.js";
+import { WeatherSystem } from "../systems/WeatherSystem.js";
+import { LightingSystem } from "../systems/LightingSystem.js";
+import { FishingUI } from "../ui/FishingUI.js";
+import { InventoryUI } from "../ui/InventoryUI.js";
+import { HUD } from "../ui/HUD.js";
 
-const input = new Input();
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-const fishingSystem = new FishingSystem();
-const fishing = fishingSystem;
+export class Game {
+    constructor({ canvas, ui, eventBus, authService, saveManager }) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext("2d");
+        this.ctx.imageSmoothingEnabled = false;
 
-ctx.imageSmoothingEnabled = false;
+        this.ui = ui;
+        this.eventBus = eventBus || new EventBus();
+        this.authService = authService;
+        this.saveManager = saveManager;
 
-// ==============================
-// 1. CAU HINH THE GIOI
-// ==============================
+        this.state = GameState.EXPLORING;
+        this.previousStateBeforeModal = GameState.EXPLORING;
 
-const world = new World();
-const player = new Player(900, 760);
-const fishingRod = new FishingRod();
+        this.input = new Input();
+        this.world = new World();
+        this.player = new Player(900, 720);
+        this.camera = new Camera(this.canvas, this.world.width, this.world.height);
 
-const camera = new Camera(
-    canvas,
-    world.width,
-    world.height
-);
+        this.fishingRod = new FishingRod();
+        this.fishingSystem = new FishingSystem(this.eventBus);
+        this.fishingMiniGame = new FishingMiniGame();
+        this.inventory = new Inventory(this.eventBus);
+        this.audioManager = new AudioManager();
+        this.timeManager = new TimeManager();
+        this.weatherSystem = new WeatherSystem();
+        this.lightingSystem = new LightingSystem();
+        this.effectManager = new EffectManager(
+            this.canvas,
+            this.ui.fishJumpEffect,
+            this.ui.fishJumpCanvas
+        );
 
-function canMoveTo(x, y) {
+        this.fishingUI = new FishingUI({
+            fishingPanel: this.ui.fishingPanel,
+            timingUI: this.ui.timingUI,
+            timingMarker: this.ui.timingMarker,
+            timingScoreText: this.ui.timingScoreText,
+            comboText: this.ui.comboText,
+            fishingTimer: this.ui.fishingTimer,
+            targetElements: this.ui.targetElements,
+            fishingStatus: this.ui.fishingStatus
+        });
 
-    // Gioi han ban do
-    if (
-        x < 15 ||
-        y < 15 ||
-        x > world.width - 15 ||
-        y > world.height - 15
-    ) {
-        return false;
+        this.inventoryUI = new InventoryUI({
+            inventoryUI: this.ui.inventoryUI,
+            inventoryCount: this.ui.inventoryCount,
+            inventoryTotal: this.ui.inventoryTotal,
+            goldText: this.ui.goldEl,
+            inventoryGold: this.ui.inventoryGold,
+            fishListUI: this.ui.fishListUI,
+            fishCountText: this.ui.fishCountEl,
+            openBtn: this.ui.inventoryBtn,
+            closeBtn: this.ui.closeInventory,
+            sellAllBtn: this.ui.sellAllBtn
+        });
+
+        this.hud = new HUD({
+            playerNameEl: this.ui.playerNameEl,
+            timeDisplayEl: this.ui.timeDisplayEl,
+            weatherDisplayEl: this.ui.weatherDisplayEl,
+            topGoldEl: this.ui.topGoldEl,
+            saveStatusEl: this.ui.saveStatusEl,
+            fishCountEl: this.ui.fishCountEl,
+            goldEl: this.ui.goldEl,
+            inventoryCountEl: this.ui.inventoryCount,
+            messageEl: this.ui.messageEl
+        });
+
+        this.stats = {
+            totalCaught: 0,
+            totalSoldGold: 0
+        };
+
+        this.rafId = null;
+        this.lastTime = 0;
+        this.elapsedSec = 0;
+        this.resultTimeout = null;
+        this.unsubscribers = [];
+        this._onBeforeUnload = () => {
+            this.saveManager?.save(true);
+        };
     }
 
-    // Kiem tra 4 goc nhan vat
-    const points = [
-        [x - 10, y - 12],
-        [x + 10, y - 12],
-        [x - 10, y + 12],
-        [x + 10, y + 12]
-    ];
+    async init() {
+        this.bindEvents();
 
-    for (const [px, py] of points) {
-
-        // Khong cho di xuong nuoc
-        if (world.isWater(px, py) && !world.onDock(px, py)) {
-            return false;
+        if (this.saveManager) {
+            this.saveManager.setStateProvider(() => this.serializeState());
+            const profile = await this.saveManager.load();
+            this.applyProfile(profile);
         }
-    }
-    if (world.isTreeCollision(x, y)) {
-        return false;
-    }
-    return true;
-}
 
-function update(deltaTime) {
-    player.move(input, deltaTime, canMoveTo);
-}
-
-function updateCamera() {camera.follow(player);}
-
-// ==============================
-// 12. VE CAY
-// ==============================
-
-
-
-// Ve phao cau ca
-function drawFishing() {
-
-    if (!fishing.active) {
-        return;
+        this.camera.follow(this.player, null, true);
+        this.syncHud();
+        this.hud.showMessage("Chào mừng đến Fishing World! Nhấn E gần hồ để câu cá.");
     }
 
-    const x = fishing.bobberX;
-    const y = fishing.bobberY;
+    bindEvents() {
+        this.inventoryUI.bindEvents({
+            onOpen: () => this.openInventory(),
+            onClose: () => this.closeInventory(),
+            onSellFish: (index) => this.sellFish(index),
+            onSellAll: () => this.sellAllFish()
+        });
 
-    // Day cau
-    ctx.strokeStyle = "#f5e8bd";
-    ctx.lineWidth = 1;
+        this.unsubscribers.push(
+            this.eventBus.on("inventory:updated", (summary) => {
+                this.hud.updateInventorySummary(summary);
+                if (this.inventoryUI.isOpen()) {
+                    this.inventoryUI.render(this.inventory);
+                }
+            }),
+            this.eventBus.on("save:completed", () => {
+                this.hud.showSaveIndicator("💾 Đã lưu");
+            }),
+            this.eventBus.on("auth:changed", (user) => {
+                this.hud.updatePlayerName(user.displayName);
+            })
+        );
 
-        // Xac dinh dau can cau
-    let rodTipX = player.x + 25;
-    let rodTipY = player.y - 35;
-
-    if (player.direction === "up") {
-        rodTipY = player.y - 40;
-    }
-    else if (player.direction === "left") {
-        rodTipX = player.x - 40;
-        rodTipY = player.y - 25;
-    }
-    else if (player.direction === "right") {
-        rodTipX = player.x + 40;
-        rodTipY = player.y - 25;
-    }
-
-    // Ve day cau
-    ctx.beginPath();
-    ctx.moveTo(rodTipX, rodTipY);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-
-    // Bong phao
-    ctx.fillStyle = "#24566a";
-    ctx.fillRect(x - 6, y - 2, 14, 8);
-
-    // Phao
-    ctx.fillStyle =
-        fishing.state === "bite" && fishing.blink
-            ? "#ffeb59"
-            : "#ffffff";
-
-    ctx.fillRect(x - 4, y - 9, 8, 15);
-
-    // Dau phao
-    ctx.fillStyle = "#ed5148";
-    ctx.fillRect(x - 4, y - 9, 8, 5);
-
-    // Hieu ung khi ca can
-    if (fishing.state === "bite") {
-
-        ctx.strokeStyle = "#fff18b";
-        ctx.lineWidth = 2;
-
-        ctx.beginPath();
-        ctx.arc(x, y, 15, 0, Math.PI * 2);
-        ctx.stroke();
-    }
-}
-
-// ==============================
-// 14. VE THE GIOI
-// ==============================
-
-function render() {
-
-    // Xoa man hinh
-    ctx.clearRect(
-        0, 0,
-        canvas.width,
-        canvas.height
-    );
-
-    // Camera dich chuyen theo nhan vat
-    ctx.save();
-    ctx.translate(-camera.x, -camera.y);
-
-    world.drawGrass(ctx);
-    world.drawLake(ctx);
-    world.drawDock(ctx);
-    world.drawTrees(ctx);
-    player.draw(ctx);
-    fishingRod.draw(ctx, player);
-    drawFishing();
-
-    ctx.restore();
-}
-
-// ==============================
-// 15. VONG LAP GAME
-// ==============================
-
-let lastTime = 0;
-
-function gameLoop(timestamp) {
-
-    const deltaTime = Math.min(
-        (timestamp - lastTime) / 1000,
-        0.05
-    );
-
-    lastTime = timestamp;
-
-    update(deltaTime);
-
-    // Cap nhat cau ca
-    updateFishing(deltaTime);
-    updateTimingGame(deltaTime);
-
-    camera.follow(player);
-    render();
-    input.update();
-
-    requestAnimationFrame(gameLoop);
-}
-
-// Bat dau game
-requestAnimationFrame(gameLoop);
-// Du lieu nguoi choi
-const inventory = new Inventory();
-const audioManager = new AudioManager();
-
-// Du lieu mini game keo ca
-const fishingMiniGame = new FishingMiniGame();
-const timingGame = fishingMiniGame;
-
-
-// Lay cac phan tu giao dien
-const fishingUI = document.getElementById("fishingUI");
-const fishingStatus = document.getElementById("fishingStatus");
-const fishingTimer = document.getElementById("fishingTimer");
-const fishCountText = document.getElementById("fishCount");
-const goldText = document.getElementById("gold");
-const message = document.getElementById("message");
-
-const timingUI = document.getElementById("timingGame");
-const timingMarker = document.getElementById("timingMarker");
-const timingScoreText = document.getElementById("timingScore");
-
-// Lấy các thành phần túi cá
-const inventoryUI = document.getElementById("inventoryUI");
-const inventoryBtn = document.getElementById("inventoryBtn");
-const closeInventory = document.getElementById("closeInventory");
-
-const inventoryCount = document.getElementById("inventoryCount");
-const inventoryTotal = document.getElementById("inventoryTotal");
-const inventoryGold = document.getElementById("inventoryGold");
-
-const fishListUI = document.getElementById("fishListUI");
-const sellAllBtn = document.getElementById("sellAllBtn");
-
-const comboText = document.getElementById("comboText");
-
-const inventoryUIManager = new InventoryUI({
-    inventoryUI,
-    inventoryCount,
-    inventoryTotal,
-    goldText,
-    inventoryGold,
-    fishListUI,
-    fishCountText
-});
-
-// Mở túi cá
-function openInventory() {
-    inventoryUIManager.render(inventory);
-    inventoryUIManager.open();
-}
-
-
-// Đóng túi cá
-function closeInventoryUI() {
-    inventoryUIManager.close();
-}
-
-
-// Bán một con cá
-function sellFish(index) {
-    const fish = inventory.sellFish(index);
-    if (!fish) return;
-    inventoryUIManager.updateHud(inventory);
-    inventoryUIManager.render(inventory);
-    showMessage("Đã bán " + fish.name + "!");
-}
-
-
-// Bán toàn bộ cá
-function sellAllFish() {
-    const totalMoney = inventory.sellAllFish();
-
-    if (totalMoney === 0) {
-        showMessage("Bạn chưa có cá để bán!");
-        return;
+        window.addEventListener("beforeunload", this._onBeforeUnload);
+        window.addEventListener("pagehide", this._onBeforeUnload);
     }
 
-    inventoryUIManager.updateHud(inventory);
-    inventoryUIManager.render(inventory);
-
-    showMessage("Đã bán tất cả cá! +" + totalMoney + " vàng");
-}
-
-
-// Sự kiện mở và đóng túi
-inventoryBtn.addEventListener("click", openInventory);
-
-closeInventory.addEventListener("click", closeInventoryUI);
-
-
-// Sự kiện bán từng con cá
-fishListUI.addEventListener("click", (e) => {
-    const button = e.target.closest("button[data-index]");
-
-    if (!button) return;
-
-    const index = Number(button.dataset.index);
-
-    sellFish(index);
-});
-
-
-// Sự kiện bán tất cả
-sellAllBtn.addEventListener("click", sellAllFish);
-
-const targetElements = [
-    document.getElementById("target0"),
-    document.getElementById("target1"),
-    document.getElementById("target2"),
-    document.getElementById("target3")
-];
-const fishingUIManager = new FishingUI({
-    fishingPanel: fishingUI,
-    timingUI,
-    timingMarker,
-    timingScoreText,
-    comboText,
-    fishingTimer,
-    targetElements,
-    fishingStatus,
-});
-
-// Hien thi thong bao
-function showMessage(text) {
-    message.textContent = text;
-
-    message.style.display = "block";
-
-    clearTimeout(showMessage.timeout);
-
-    showMessage.timeout = setTimeout(() => {
-        message.style.display = "none";
-    }, 2500);
-}
-
-// Kiem tra nguoi choi co gan ben cau ca
-function nearFishingSpot() {
-    return world.isNearDock(player.x, player.y);
-}
-
-// Bat dau cau ca
-function startFishing() {
-
-    if (fishingSystem.state !== "idle") {
-        return;
+    serializeState() {
+        return {
+            player: {
+                ...this.player.toJSON(),
+                level: 1,
+                xp: 0
+            },
+            inventory: this.inventory.toJSON(),
+            time: this.timeManager.toJSON(),
+            stats: { ...this.stats }
+        };
     }
 
-    if (!world.isNearDock(player.x, player.y)) {
-        showMessage("Hãy đến gần hồ để câu cá!");
-        return;
-    }
+    applyProfile(profile) {
+        if (!profile) return;
 
-    const started = fishingSystem.startFishing(world.lake);
+        this.hud.updatePlayerName(profile.displayName || "Guest");
 
-    if (!started) return;
+        if (profile.player) {
+            const px = Number(profile.player.x);
+            const py = Number(profile.player.y);
+            const dir = profile.player.direction || "down";
+            if (Number.isFinite(px) && Number.isFinite(py) && this.world.canMoveTo(px, py)) {
+                this.player.setPosition(px, py, dir);
+            }
+        }
 
-    fishingUIManager.showFishingPanel();
-    fishingUIManager.showFishingTimerElement();
-    fishingUIManager.showFishingStatus("🎣 Đang chờ cá cắn câu...");
-    fishingUIManager.showFishingTimer("Hãy kiên nhẫn chờ nhé!");
+        if (profile.inventory) {
+            this.inventory.loadFromData(profile.inventory);
+        }
 
-    showMessage("Bạn đã ném cần câu!");
-}
+        if (profile.time) {
+            this.timeManager.fromJSON(profile.time);
+        }
 
-// Cau thanh cong
-function catchFish() {
-    const fish = fishingSystem.currentFish;
-    if (!fish) return;
-
-
-    audioManager.playCatchSound();
-    effectManager.triggerFishJump();
-
-    //them ca vao tui
-    inventory.addFish(fish);
-    inventoryUIManager.updateHud(inventory);
-
-    // Thông báo kết quả
-    fishingUIManager.showFishingStatus("🎉 CÂU ĐƯỢC " + fish.name + "!");
-    fishingUIManager.showFishingTimer("");
-    fishingUIManager.hideFishingTimer();
-    fishingUIManager.hideTiming();
-
-    showMessage("🎣 Câu được " + fish.name + "!");
-
-    setTimeout(resetFishing, 2500);
-}
-
-// Cau that bai
-function failFishing() {
-
-    fishingUIManager.hideTiming();
-    fishingUIManager.showFishingStatus("😢 Cá đã chạy mất!");
-    fishingUIManager.showFishingTimer("Hãy thử lại nhé!");
-
-    showMessage("Rất tiếc bạn đã để cá thoát.");
-
-    setTimeout(resetFishing, 2000);
-}
-
-// Reset trang thai cau
-function resetFishing() {
-
-    // Đặt lại trạng thái câu cá
-    fishingSystem.stopFishing();
-
-    // Cập nhật giao diện
-    fishingUIManager.hideFishingPanel();
-
-    // Đặt lại mini-game
-    timingGame.combo = 0;
-}
-
-// Nhan phim E va SPACE
-
-window.addEventListener("keydown", (e) => {
-
-    if (e.repeat) return;
-
-    if (e.code === "KeyE") {
-
-        e.preventDefault();
-
-        if (fishing.state === "idle") {
-            startFishing();
+        if (profile.stats) {
+            this.stats = {
+                totalCaught: Number(profile.stats.totalCaught) || 0,
+                totalSoldGold: Number(profile.stats.totalSoldGold) || 0
+            };
         }
     }
 
-    if (e.code === "Space") {
+    syncHud() {
+        this.hud.updatePlayerName(this.authService?.getDisplayName() || "Guest");
+        this.hud.updateTimeAndWeather(
+            this.timeManager.getFormattedTime(),
+            this.weatherSystem.getWeatherText()
+        );
+        this.hud.updateInventorySummary({
+            fishCount: this.inventory.getFishCount(),
+            capacity: this.inventory.capacity,
+            gold: this.inventory.gold
+        });
+    }
 
-        if (fishing.state === "timing") {
+    setState(newState) {
+        this.state = newState;
+    }
 
-            e.preventDefault();
+    start() {
+        if (this.rafId !== null) return;
+        this.lastTime = performance.now();
 
-            pressTimingButton();
+        const loop = (timestamp) => {
+            const deltaTime = Math.min((timestamp - this.lastTime) / 1000, 0.05);
+            this.lastTime = timestamp;
+
+            this.update(deltaTime);
+            this.render();
+            this.input.update();
+
+            this.rafId = requestAnimationFrame(loop);
+        };
+
+        this.rafId = requestAnimationFrame(loop);
+    }
+
+    stop() {
+        if (this.rafId !== null) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
         }
     }
-});
 
-// Ket thuc he thong cau ca
-// Khởi tạo mini-game
-function startTimingGame() {
+    update(deltaTime) {
+        this.elapsedSec += deltaTime;
+        this.handleHotkeys();
 
-    // Chọn cá ngay khi cá cắn câu
-    const currentFish = fishingSystem.selectFish();
+        this.timeManager.update(deltaTime);
+        this.weatherSystem.update(
+            deltaTime,
+            this.world.width,
+            this.world.height,
+            this.timeManager.getPhase()
+        );
+        this.hud.updateTimeAndWeather(
+            this.timeManager.getFormattedTime(),
+            this.weatherSystem.getWeatherText()
+        );
 
-    fishing.state = "timing";
+        if (this.state === GameState.EXPLORING) {
+            this.player.update(this.input, deltaTime, (x, y) => this.world.canMoveTo(x, y));
+        } else if (this.state === GameState.FISHING_WAITING) {
+            this.player.update(this.input, deltaTime, (x, y) => this.world.canMoveTo(x, y));
+            this.updateFishing(deltaTime);
+        } else if (this.state === GameState.FISHING_BITING) {
+            this.updateFishing(deltaTime);
+        } else if (this.state === GameState.FISHING_MINIGAME) {
+            this.updateFishing(deltaTime);
+            this.updateTimingGame(deltaTime);
+        }
 
-    fishingMiniGame.start(currentFish);
+        this.effectManager.update(deltaTime);
+        this.camera.follow(this.player, deltaTime);
+    }
 
-    // Điều chỉnh kích thước vùng mục tiêu
-    const scale = fishingMiniGame.getTargetScale(currentFish);
+    handleHotkeys() {
+        if (this.input.isJustPressed("i")) {
+            if (this.inventoryUI.isOpen()) {
+                this.closeInventory();
+            } else if (
+                this.state === GameState.EXPLORING ||
+                this.state === GameState.FISHING_WAITING
+            ) {
+                this.openInventory();
+            }
+            return;
+        }
 
-    fishingUIManager.configureTargets(timingGame, scale);
-    fishingUIManager.showTiming();
-    fishingUIManager.showFishingStatus("🐟 " + currentFish.name + " đang cắn câu!");
-    fishingUIManager.showFishingTimer("Canh trục chạy và nhấn SPACE!");
+        if (this.input.isJustPressed("escape")) {
+            if (this.inventoryUI.isOpen()) {
+                this.closeInventory();
+            } else if (this.state === GameState.FISHING_WAITING) {
+                this.resetFishing();
+                this.hud.showMessage("Đã thu cần câu.");
+            }
+            return;
+        }
 
-    updateTimingUI();
+        if (this.input.isJustPressed("e")) {
+            if (this.state === GameState.EXPLORING) {
+                this.startFishing();
+            } else if (this.state === GameState.FISHING_WAITING) {
+                this.resetFishing();
+                this.hud.showMessage("Đã thu cần câu.");
+            }
+            return;
+        }
+
+        if (this.input.isJustPressed("space")) {
+            if (this.state === GameState.FISHING_BITING) {
+                this.startTimingGame();
+            } else if (this.state === GameState.FISHING_MINIGAME) {
+                this.pressTimingButton();
+            }
+        }
+    }
+
+    openInventory() {
+        if (this.inventoryUI.isOpen()) return;
+        this.previousStateBeforeModal = this.state;
+        this.setState(GameState.UI_MODAL);
+        this.inventoryUI.render(this.inventory);
+        this.inventoryUI.open();
+    }
+
+    closeInventory() {
+        if (!this.inventoryUI.isOpen()) return;
+        this.inventoryUI.close();
+        this.setState(
+            this.previousStateBeforeModal === GameState.UI_MODAL
+                ? GameState.EXPLORING
+                : this.previousStateBeforeModal
+        );
+    }
+
+    sellFish(index) {
+        const fish = this.inventory.sellFish(index);
+        if (!fish) return;
+
+        this.stats.totalSoldGold += fish.price;
+        this.saveManager?.save(false);
+        this.hud.showMessage(`Đã bán ${fish.name}! +${fish.price} vàng`);
+    }
+
+    sellAllFish() {
+        const totalMoney = this.inventory.sellAllFish();
+        if (totalMoney === 0) {
+            this.hud.showMessage("Bạn chưa có cá để bán!");
+            return;
+        }
+
+        this.stats.totalSoldGold += totalMoney;
+        this.saveManager?.save(false);
+        this.hud.showMessage(`Đã bán tất cả cá! +${totalMoney} vàng`);
+    }
+
+    startFishing() {
+        if (this.fishingSystem.state !== "idle") {
+            return;
+        }
+
+        if (!this.world.canStartFishing(this.player.x, this.player.y)) {
+            this.hud.showMessage("Hãy đến gần hồ hoặc bến gỗ để câu cá!");
+            return;
+        }
+
+        if (this.inventory.isFull()) {
+            this.hud.showMessage("Túi cá đã đầy! Hãy bán bớt cá trước khi câu.");
+            return;
+        }
+
+        const bobberPos = this.world.getBobberPosition(
+            this.player.x,
+            this.player.y,
+            this.player.direction
+        );
+
+        const started = this.fishingSystem.startFishing(bobberPos);
+        if (!started) return;
+
+        this.effectManager.addWaterSplash(bobberPos.x, bobberPos.y, 6);
+        this.effectManager.addWaterRipple(bobberPos.x, bobberPos.y, 25);
+
+        clearTimeout(this.resultTimeout);
+        this.setState(GameState.FISHING_WAITING);
+
+        this.fishingUI.showFishingPanel();
+        this.fishingUI.showFishingTimerElement();
+        this.fishingUI.hideTiming();
+        this.fishingUI.showFishingStatus("🎣 Đang chờ cá cắn câu...");
+        this.fishingUI.showFishingTimer("Hãy kiên nhẫn chờ nhé! (Nhấn E để thu cần)");
+
+        this.hud.showMessage("Bạn đã ném cần câu!");
+    }
+
+    updateFishing(deltaTime) {
+        if (!this.fishingSystem.isActive()) return;
+
+        if (!this.world.isNearLake(this.player.x, this.player.y)) {
+            this.resetFishing();
+            this.hud.showMessage("Bạn đã rời khỏi khu vực câu cá!");
+            return;
+        }
+
+        const fishingEvent = this.fishingSystem.update(deltaTime);
+
+        if (fishingEvent === "biting") {
+            this.setState(GameState.FISHING_BITING);
+            this.audioManager.playHitSound();
+            this.camera.shake(3, 0.2);
+            this.effectManager.addWaterRipple(this.fishingSystem.bobberX, this.fishingSystem.bobberY, 35, "#fff18b");
+            this.effectManager.addWaterSplash(this.fishingSystem.bobberX, this.fishingSystem.bobberY, 10);
+            this.fishingUI.showFishingStatus("⚡ Cá đang cắn câu!");
+            this.fishingUI.showFishingTimer("Chuẩn bị kéo cần!");
+        } else if (fishingEvent === "start_timing") {
+            this.startTimingGame();
+        }
+    }
+
+    startTimingGame() {
+        if (this.state === GameState.FISHING_MINIGAME) return;
+
+        const currentFish = this.fishingSystem.selectFish();
+        this.fishingSystem.enterTiming();
+        this.setState(GameState.FISHING_MINIGAME);
+
+        this.fishingMiniGame.start(currentFish);
+        const scale = this.fishingMiniGame.getTargetScale(currentFish);
+
+        this.fishingUI.configureTargets(this.fishingMiniGame, scale);
+        this.fishingUI.showTiming();
+        this.fishingUI.showFishingStatus(`🐟 ${currentFish.name} đang cắn câu!`);
+        this.fishingUI.showFishingTimer("Canh trục chạy và nhấn SPACE!");
+        this.fishingUI.updateTiming(this.fishingMiniGame);
+    }
+
+    updateTimingGame(deltaTime) {
+        if (this.state !== GameState.FISHING_MINIGAME) {
+            return;
+        }
+
+        const timeOut = this.fishingMiniGame.update(deltaTime);
+        this.fishingUI.updateTiming(this.fishingMiniGame);
+        this.fishingUI.showFishingTimer(
+            `Thời gian: ${Math.max(0, this.fishingMiniGame.timeLeft).toFixed(1)}s`
+        );
+
+        if (timeOut) {
+            this.failFishing();
+        }
+    }
+
+    pressTimingButton() {
+        if (this.state !== GameState.FISHING_MINIGAME) return;
+
+        const result = this.fishingMiniGame.press(this.fishingSystem.currentFish);
+
+        if (result.hit) {
+            this.fishingUI.markTargetHit(result.index);
+            this.audioManager.playHitSound();
+            this.effectManager.triggerRodJerk();
+            this.effectManager.addWaterRipple(this.fishingSystem.bobberX, this.fishingSystem.bobberY, 20);
+            this.camera.shake(2.5, 0.12);
+            this.hud.showMessage(`🎯 Chính xác! Combo x${result.combo}`);
+            this.effectManager.addFloatingText(this.player.x, this.player.y - 30, `Hit! x${result.combo}`, "#ffeb3b");
+        } else {
+            this.audioManager.playMissSound();
+            this.hud.showMessage("❌ Trượt rồi! Combo đã bị mất!");
+            this.effectManager.addFloatingText(this.player.x, this.player.y - 30, "Miss!", "#ef5350");
+        }
+
+        this.fishingUI.updateTiming(this.fishingMiniGame);
+
+        if (result.completed) {
+            this.fishingUI.hideTiming();
+            this.catchFish();
+        }
+    }
+
+    catchFish() {
+        const fish = this.fishingSystem.currentFish;
+        if (!fish) return;
+
+        this.fishingSystem.enterResult();
+        this.setState(GameState.FISHING_RESULT);
+
+        this.audioManager.playCatchSound();
+        this.effectManager.triggerFishJump();
+        this.effectManager.addWaterSplash(this.fishingSystem.bobberX, this.fishingSystem.bobberY, 15);
+        this.effectManager.addFloatingText(this.player.x, this.player.y - 40, `+1 ${fish.name}!`, "#4caf50");
+        this.camera.shake(4.5, 0.22);
+
+        const added = this.inventory.addFish(fish);
+        if (added) {
+            this.stats.totalCaught += 1;
+            this.saveManager?.save(false);
+            this.fishingUI.showFishingStatus(`🎉 CÂU ĐƯỢC ${fish.name}!`);
+            this.hud.showMessage(`🎣 Câu được ${fish.name}!`);
+        } else {
+            this.fishingUI.showFishingStatus("🎒 Túi cá đã đầy!");
+            this.hud.showMessage("Túi cá đã đầy, không thể giữ thêm!");
+        }
+
+        this.fishingUI.showFishingTimer("");
+        this.fishingUI.hideFishingTimer();
+        this.fishingUI.hideTiming();
+
+        clearTimeout(this.resultTimeout);
+        this.resultTimeout = setTimeout(() => this.resetFishing(), 2200);
+    }
+
+    failFishing() {
+        this.fishingSystem.enterResult();
+        this.setState(GameState.FISHING_RESULT);
+
+        this.fishingUI.hideTiming();
+        this.fishingUI.showFishingStatus("😢 Cá đã chạy mất!");
+        this.fishingUI.showFishingTimer("Hãy thử lại nhé!");
+        this.hud.showMessage("Rất tiếc bạn đã để cá thoát.");
+
+        clearTimeout(this.resultTimeout);
+        this.resultTimeout = setTimeout(() => this.resetFishing(), 1800);
+    }
+
+    resetFishing() {
+        clearTimeout(this.resultTimeout);
+        this.resultTimeout = null;
+
+        this.fishingSystem.stopFishing();
+        this.fishingMiniGame.reset();
+        this.fishingUI.hideTiming();
+        this.fishingUI.hideFishingPanel();
+        this.setState(GameState.EXPLORING);
+    }
+
+    render() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        const timePhase = this.timeManager.getPhase();
+        const isNight = timePhase === "NIGHT" || timePhase === "DUSK";
+
+        this.ctx.save();
+        this.ctx.translate(-this.camera.getRenderX(), -this.camera.getRenderY());
+
+        this.world.drawBackground(this.ctx, this.elapsedSec);
+        this.world.drawDock(this.ctx);
+
+        // Vẽ phao câu
+        this.drawFishing();
+
+        // Y-Sorting: Player, Trees, Bushes, Rocks, Lanterns
+        const renderables = this.world.getRenderables(
+            this.player,
+            this.fishingRod,
+            this.fishingSystem,
+            isNight
+        );
+        for (const obj of renderables) {
+            obj.draw(this.ctx);
+        }
+
+        // Particles & Thời tiết
+        this.effectManager.drawParticles(this.ctx);
+        this.weatherSystem.drawWeather(
+            this.ctx,
+            this.world.width,
+            this.world.height,
+            timePhase
+        );
+
+        this.ctx.restore();
+
+        // Chiếu sáng Ngày / Đêm phủ lên toàn bộ viewport
+        const ambientLight = this.timeManager.getAmbientLight();
+        const lights = this.world.getLightSources(this.player, this.fishingSystem);
+        this.lightingSystem.renderLighting(
+            this.ctx,
+            this.canvas.width,
+            this.canvas.height,
+            this.camera,
+            ambientLight,
+            lights
+        );
+    }
+
+    drawFishing() {
+        if (!this.fishingSystem.active) {
+            return;
+        }
+
+        const x = this.fishingSystem.bobberX;
+        const y = this.fishingSystem.bobberY;
+
+        // Bóng phao
+        this.ctx.fillStyle = "#24566a";
+        this.ctx.fillRect(x - 6, y - 2, 14, 8);
+
+        // Phao
+        const isBiting = this.fishingSystem.isBitingOrTiming();
+        this.ctx.fillStyle = isBiting && this.fishingSystem.blink ? "#ffeb59" : "#ffffff";
+        this.ctx.fillRect(x - 4, y - 9, 8, 15);
+
+        // Đầu phao
+        this.ctx.fillStyle = "#ed5148";
+        this.ctx.fillRect(x - 4, y - 9, 8, 5);
+
+        // Hiệu ứng vòng sáng khi cá cắn
+        if (isBiting) {
+            this.ctx.strokeStyle = "#fff18b";
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, 15, 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
+    }
+
+    destroy() {
+        this.stop();
+        clearTimeout(this.resultTimeout);
+        this.input.destroy();
+        this.hud.destroy();
+        this.saveManager?.destroy();
+
+        for (const unsubscribe of this.unsubscribers) {
+            unsubscribe();
+        }
+        this.unsubscribers = [];
+
+        window.removeEventListener("beforeunload", this._onBeforeUnload);
+        window.removeEventListener("pagehide", this._onBeforeUnload);
+    }
 }
-
-function updateTimingGame(deltaTime) {
-
-    if (fishing.state !== "timing") {
-        return;
-    }
-
-    // Cập nhật logic mini-game
-    const timeOut = fishingMiniGame.update(deltaTime);
-
-    // Cập nhật giao diện
-    updateTimingUI();
-
-    fishingUIManager.showFishingTimer(
-        "Thời gian: " + Math.max(0, timingGame.timeLeft).toFixed(1) + "s");
-    // Kiểm tra hết giờ
-    if (timeOut) {
-        failFishing();
-    }
-}
-
-function updateTimingUI() {
-    fishingUIManager.updateTiming(timingGame);
-}
-
-function pressTimingButton() {
-    if (fishing.state !== "timing") return;
-
-    const result = fishingMiniGame.press(
-        fishingSystem.currentFish
-    );
-    console.log("KẾT QUẢ CÂU CÁ:", result);
-
-    if (result.hit) {
-        fishingUIManager.markTargetHit(result.index);
-
-        audioManager.playHitSound();
-        effectManager.triggerRodJerk();
-
-        showMessage("🎯 Chính xác! Combo x" + result.combo);
-    } else {
-        audioManager.playMissSound();
-
-        showMessage("❌ Trượt rồi! Combo đã bị mất!");
-    }
-
-    updateTimingUI();
-
-    if (result.completed) {
-        fishingUIManager.hideTiming();
-        catchFish();
-    }
-}
-
-function updateFishing(deltaTime) {
-
-    if (!fishingSystem.isActive()) return;
-
-    // Kiểm tra người chơi có rời khỏi hồ không
-    if (!world.isNearLake(player.x, player.y)) {
-        resetFishing();
-        showMessage("Bạn đã rời khỏi khu vực câu cá!");
-        return;
-    }
-
-    const fishBiting = fishingSystem.update(deltaTime);
-
-    if (fishBiting) {
-        startTimingGame();
-    }
-}
-
-const fishJumpEffect =
-    document.getElementById("fishJumpEffect");
-
-const fishJumpCanvas =
-    document.getElementById("fishJumpCanvas");
-
-const effectManager = new EffectManager(
-    canvas,
-    fishJumpEffect,
-    fishJumpCanvas
-);

@@ -3,48 +3,83 @@ export class Input {
         this.keys = {};
         this.previousKeys = {};
 
-        window.addEventListener("keydown", (e) => {
-            const key = e.key.toLowerCase();
+        this._onKeyDown = (e) => {
+            if (this.isFormInputFocused()) {
+                return;
+            }
+
+            const key = this.normalizeKey(e.key);
 
             if ([
                 "w", "a", "s", "d",
                 "arrowup", "arrowdown",
-                "arrowleft", "arrowright"
+                "arrowleft", "arrowright",
+                "space"
             ].includes(key)) {
                 e.preventDefault();
             }
 
             this.keys[key] = true;
-        });
+        };
 
-        window.addEventListener("keyup", (e) => {
-            this.keys[e.key.toLowerCase()] = false;
-        });
+        this._onKeyUp = (e) => {
+            const key = this.normalizeKey(e.key);
+            this.keys[key] = false;
+        };
 
-        window.addEventListener("blur", () => {
-            for (const key in this.keys) {
-                this.keys[key] = false;
-            }
-        });
+        this._onBlur = () => {
+            this.clear();
+        };
+
+        window.addEventListener("keydown", this._onKeyDown);
+        window.addEventListener("keyup", this._onKeyUp);
+        window.addEventListener("blur", this._onBlur);
+    }
+
+    normalizeKey(rawKey) {
+        if (rawKey === " ") {
+            return "space";
+        }
+        return String(rawKey || "").toLowerCase();
+    }
+
+    isFormInputFocused() {
+        const active = document.activeElement;
+        if (!active) return false;
+        const tag = active.tagName;
+        return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || active.isContentEditable;
     }
 
     isPressed(key) {
-        return this.keys[key.toLowerCase()] === true;
+        return this.keys[this.normalizeKey(key)] === true;
     }
 
     isJustPressed(key) {
-        return this.keys[key.toLowerCase()] === true &&
-            !this.previousKeys?.[key.toLowerCase()];
+        const normalized = this.normalizeKey(key);
+        return this.keys[normalized] === true &&
+            this.previousKeys[normalized] !== true;
+    }
+
+    anyPressed(keys) {
+        return keys.some((key) => this.isPressed(key));
+    }
+
+    clear() {
+        for (const key in this.keys) {
+            this.keys[key] = false;
+        }
+        for (const key in this.previousKeys) {
+            this.previousKeys[key] = false;
+        }
     }
 
     update() {
         this.previousKeys = { ...this.keys };
     }
 
-    isJustPressed(key) {
-        key = key.toLowerCase();
-
-        return this.keys[key] === true &&
-            this.previousKeys[key] !== true;
+    destroy() {
+        window.removeEventListener("keydown", this._onKeyDown);
+        window.removeEventListener("keyup", this._onKeyUp);
+        window.removeEventListener("blur", this._onBlur);
     }
 }

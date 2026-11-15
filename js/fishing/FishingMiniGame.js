@@ -64,6 +64,17 @@ export class FishingMiniGame {
         });
     }
 
+    reset() {
+        this.position = 0;
+        this.direction = 1;
+        this.score = 0;
+        this.combo = 0;
+        this.timeLeft = this.duration;
+        this.targets.forEach((target) => {
+            target.hit = false;
+        });
+    }
+
     // Tốc độ theo độ hiếm
     getFishSpeed(fish) {
         const speeds = {

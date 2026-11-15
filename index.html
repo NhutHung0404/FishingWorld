@@ -14,8 +14,11 @@
         <header class="top-bar">
             <h1>🎣 FISHING WORLD</h1>
             <div class="player-info">
-                <span>👤 Người chơi: Guest</span>
-                <span>🪙 100 Gold</span>
+                <span id="timeDisplay">☀️ 08:00 (Ban ngày)</span>
+                <span id="weatherDisplay">🌤️ Trong lành</span>
+                <span id="playerName">👤 Người chơi: Guest</span>
+                <span id="topGold">🪙 100 Gold</span>
+                <span id="saveStatus" class="save-status">💾 Tự động lưu</span>
             </div>
         </header>
 
@@ -80,8 +83,8 @@
         </main>
 
         <footer class="bottom-bar">
-            <div>W A S D / ← ↑ → ↓ : Di chuyển</div>
-            <div>🎣 Fishing World - Version 0.1</div>
+            <div>W A S D / ← ↑ → ↓ : Di chuyển | E : Câu cá | Space : Kéo cá | I : Túi cá</div>
+            <div>🎣 Fishing World - Version 0.2</div>
         </footer>
 
         <!-- Nút mở túi cá -->
@@ -114,6 +117,6 @@
 
     
 
-    <script type="module" src="js/core/Game.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

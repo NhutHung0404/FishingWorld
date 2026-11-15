@@ -1,5 +1,4 @@
 export class Player {
-
     constructor(x, y) {
         this.x = x;
         this.y = y;
@@ -9,56 +8,80 @@ export class Player {
         this.speed = 200;
 
         this.direction = "down";
+        this.isMoving = false;
+    }
+
+    update(input, deltaTime, canMoveTo) {
+        this.move(input, deltaTime, canMoveTo);
     }
 
     move(input, deltaTime, canMoveTo) {
+        let dx = 0;
+        let dy = 0;
 
-    let dx = 0;
-    let dy = 0;
+        if (input.isPressed("w") || input.isPressed("arrowup")) {
+            dy--;
+            this.direction = "up";
+        }
 
-    if (input.isPressed("w") || input.isPressed("arrowup")) {
-        dy--;
-        this.direction = "up";
+        if (input.isPressed("s") || input.isPressed("arrowdown")) {
+            dy++;
+            this.direction = "down";
+        }
+
+        if (input.isPressed("a") || input.isPressed("arrowleft")) {
+            dx--;
+            this.direction = "left";
+        }
+
+        if (input.isPressed("d") || input.isPressed("arrowright")) {
+            dx++;
+            this.direction = "right";
+        }
+
+        this.isMoving = dx !== 0 || dy !== 0;
+
+        if (!this.isMoving) {
+            return;
+        }
+
+        // Chuan hoa toc do di cheo
+        if (dx !== 0 && dy !== 0) {
+            dx *= 0.7071;
+            dy *= 0.7071;
+        }
+
+        const nextX = this.x + dx * this.speed * deltaTime;
+        const nextY = this.y + dy * this.speed * deltaTime;
+
+        // Kiem tra va cham truc X
+        if (canMoveTo(nextX, this.y)) {
+            this.x = nextX;
+        }
+
+        // Kiem tra va cham truc Y
+        if (canMoveTo(this.x, nextY)) {
+            this.y = nextY;
+        }
     }
 
-    if (input.isPressed("s") || input.isPressed("arrowdown")) {
-        dy++;
-        this.direction = "down";
+    setPosition(x, y, direction = this.direction) {
+        this.x = x;
+        this.y = y;
+        this.direction = direction;
+        this.isMoving = false;
     }
 
-    if (input.isPressed("a") || input.isPressed("arrowleft")) {
-        dx--;
-        this.direction = "left";
-    }
-
-    if (input.isPressed("d") || input.isPressed("arrowright")) {
-        dx++;
-        this.direction = "right";
-    }
-
-    // Chuan hoa toc do di cheo
-    if (dx !== 0 && dy !== 0) {
-        dx *= 0.7071;
-        dy *= 0.7071;
-    }
-
-    const nextX = this.x + dx * this.speed * deltaTime;
-    const nextY = this.y + dy * this.speed * deltaTime;
-
-    // Kiem tra va cham truc X
-    if (canMoveTo(nextX, this.y)) {
-        this.x = nextX;
-    }
-
-    // Kiem tra va cham truc Y
-    if (canMoveTo(this.x, nextY)) {
-        this.y = nextY;
-    }
+    toJSON() {
+        return {
+            x: Math.round(this.x),
+            y: Math.round(this.y),
+            direction: this.direction
+        };
     }
 
     // Ve nhan vat
     draw(ctx) {
-
         const x = this.x;
         const y = this.y;
 
