@@ -66,6 +66,13 @@ export class World {
             { x: 740, y: 260, r: 15 }
         ];
 
+        // NPC Thương nhân cạnh bến gỗ
+        this.merchant = {
+            x: 780,
+            y: 715,
+            name: "Thương Nhân"
+        };
+
         // Offscreen canvas cache cho địa hình tĩnh
         this.bgCacheCanvas = null;
         this.buildBackgroundCache();
@@ -294,6 +301,12 @@ export class World {
             });
         }
 
+        const nearMerchant = this.isNearMerchant(player.x, player.y);
+        list.push({
+            y: this.merchant.y + 12,
+            draw: (ctx) => this.drawMerchant(ctx, nearMerchant)
+        });
+
         list.push({
             y: player.y + 12,
             draw: (ctx) => {
@@ -320,6 +333,9 @@ export class World {
             lights.push({ x: l.x, y: l.y - 28, radius: 110, intensity: 0.95 });
         }
 
+        // Đèn sạp Thương nhân
+        lights.push({ x: this.merchant.x, y: this.merchant.y - 30, radius: 105, intensity: 0.9 });
+
         // Hào quang nhẹ quanh người chơi
         lights.push({ x: player.x, y: player.y - 10, radius: 95, intensity: 0.75 });
 
@@ -334,6 +350,75 @@ export class World {
         }
 
         return lights;
+    }
+
+    drawMerchant(ctx, isNearPlayer = false) {
+        const { x, y } = this.merchant;
+
+        // Sạp gỗ nhỏ
+        ctx.fillStyle = "#5c3a21";
+        ctx.fillRect(x - 24, y - 4, 48, 18);
+        ctx.fillStyle = "#8a5a36";
+        ctx.fillRect(x - 26, y - 6, 52, 6);
+
+        // Mái che sọc
+        ctx.fillStyle = "#c94a4a";
+        ctx.fillRect(x - 28, y - 40, 56, 12);
+        ctx.fillStyle = "#f5e6c8";
+        for (let sx = x - 24; sx < x + 24; sx += 14) {
+            ctx.fillRect(sx, y - 40, 7, 12);
+        }
+
+        // Cột chống
+        ctx.fillStyle = "#4a2c16";
+        ctx.fillRect(x - 24, y - 28, 4, 24);
+        ctx.fillRect(x + 20, y - 28, 4, 24);
+
+        // NPC Thương nhân
+        ctx.fillStyle = "#3a5a8c";
+        ctx.fillRect(x - 8, y - 20, 16, 15); // Áo
+        ctx.fillStyle = "#f5c28b";
+        ctx.fillRect(x - 7, y - 32, 14, 12); // Đầu
+        ctx.fillStyle = "#e0e0e0";
+        ctx.fillRect(x - 5, y - 22, 10, 4); // Râu bạc
+        ctx.fillStyle = "#7a4e2d";
+        ctx.fillRect(x - 10, y - 36, 20, 5); // Nón
+
+        if (isNearPlayer) {
+            ctx.fillStyle = "rgba(20, 35, 30, 0.85)";
+            ctx.fillRect(x - 46, y - 58, 92, 18);
+            ctx.strokeStyle = "#ffe28a";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - 46, y - 58, 92, 18);
+            ctx.fillStyle = "#ffe28a";
+            ctx.font = "bold 11px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("[F] Cửa hàng", x, y - 45);
+            ctx.textAlign = "left";
+        }
+    }
+
+    isNearMerchant(x, y, range = 75) {
+        const dx = x - this.merchant.x;
+        const dy = y - this.merchant.y;
+        return Math.hypot(dx, dy) <= range;
+    }
+
+    getFishingZone(x, y) {
+        if (this.onDock(x, y) || this.isNearDock(x, y)) {
+            return "DOCK";
+        }
+        // Khu vực Bờ Đá Sâu phía Đông (gần đá x ~ 1310)
+        if (x > 1180) {
+            return "DEEP_ROCKS";
+        }
+        // Giữa hồ sâu (gần tâm hồ)
+        const dx = (x - this.lake.x) / this.lake.rx;
+        const dy = (y - this.lake.y) / this.lake.ry;
+        if (dx * dx + dy * dy <= 0.45) {
+            return "CENTER_LAKE";
+        }
+        return "SHORE";
     }
 
     drawTrees(ctx) {
@@ -356,6 +441,13 @@ export class World {
             if (Math.sqrt(dx * dx + dy * dy) < rock.r + 12) {
                 return true;
             }
+        }
+        if (
+            Math.abs(x - this.merchant.x) < 30 &&
+            y > this.merchant.y - 12 &&
+            y < this.merchant.y + 18
+        ) {
+            return true;
         }
         return false;
     }

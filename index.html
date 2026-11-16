@@ -16,6 +16,7 @@
             <div class="player-info">
                 <span id="timeDisplay">☀️ 08:00 (Ban ngày)</span>
                 <span id="weatherDisplay">🌤️ Trong lành</span>
+                <span id="levelDisplay">⭐ Lv.1 (0/100)</span>
                 <span id="playerName">👤 Người chơi: Guest</span>
                 <span id="topGold">🪙 100 Gold</span>
                 <span id="saveStatus" class="save-status">💾 Tự động lưu</span>
@@ -61,8 +62,17 @@
                     </div>
 
                     <div class="timing-hint">
-                        Nhấn SPACE khi vạch đỏ nằm trong vùng màu xanh!
+                        Nhấn SPACE hoặc Click/Tap vào thanh để kéo!
                     </div>
+
+                    <div id="tensionBox" class="tension-box" style="display: none;">
+                        <div id="tensionText" class="tension-text">Căng dây: 0%</div>
+                        <div class="tension-bar">
+                            <div id="tensionFill" class="tension-fill"></div>
+                        </div>
+                    </div>
+
+                    <button id="reelBtn" class="reel-btn">🎣 Kéo Cần!</button>
 
                 </div>
 
@@ -76,21 +86,24 @@
 
 
             <div class="fish-inventory">
-                🐟 Cá đã câu: <span id="fishCount">0</span>
-                <span> | </span>
-                🪙 Vàng: <span id="gold">100</span>
+                🐟 Cá: <span id="fishCount">0</span> | 🪙 Vàng: <span id="gold">100</span>
+                <div id="equipDisplay" class="equip-display">🎣 Cần Tre Cổ Điển | 🪱 Không mồi</div>
             </div>
         </main>
 
         <footer class="bottom-bar">
-            <div>W A S D / ← ↑ → ↓ : Di chuyển | E : Câu cá | Space : Kéo cá | I : Túi cá</div>
-            <div>🎣 Fishing World - Version 0.2</div>
+            <div>WASD: Di chuyển | E: Câu cá | F: Cửa hàng | P: Sổ tay | Q: Nhiệm vụ | I: Túi cá</div>
+            <div>🎣 Fishing World - Phase 3</div>
         </footer>
 
-        <!-- Nút mở túi cá -->
-        <button id="inventoryBtn" class="inventory-btn">
-            🎒 Túi cá (<span id="inventoryCount">0</span>)
-        </button>
+        <div class="action-buttons">
+            <button id="inventoryBtn" class="inventory-btn">
+                🎒 Túi cá (<span id="inventoryCount">0</span>)
+            </button>
+            <button id="shopBtn" class="inventory-btn">🏪 Cửa hàng</button>
+            <button id="fishpediaBtn" class="inventory-btn">📖 Sổ tay cá</button>
+            <button id="questsBtn" class="inventory-btn">📜 Nhiệm vụ<span id="questBadge"></span></button>
+        </div>
 
         <!-- Cửa sổ túi cá -->
         <div id="inventoryUI" class="inventory-ui">
@@ -110,6 +123,43 @@
 
             <div class="inventory-footer">
                 <button id="sellAllBtn">Bán tất cả cá</button>
+            </div>
+        </div>
+
+        <!-- Cửa hàng Thương nhân -->
+        <div id="shopModal" class="inventory-ui modal-wide">
+            <div class="inventory-header">
+                <h2>🏪 CỬA HÀNG NGƯ CỤ</h2>
+                <button id="closeShop">✖</button>
+            </div>
+            <div class="inventory-info">
+                <span>Thương nhân: Lão Ngư Ông</span>
+                <span>🪙 Vàng: <span id="shopGold">100</span></span>
+            </div>
+            <div id="shopBody" class="fish-list"></div>
+        </div>
+
+        <!-- Sổ tay cá (Fishpedia) -->
+        <div id="fishpediaModal" class="inventory-ui modal-wide">
+            <div class="inventory-header">
+                <h2>📖 SỔ TAY CÁ (FISHPEDIA)</h2>
+                <button id="closeFishpedia">✖</button>
+            </div>
+            <div class="inventory-info">
+                <span>Tiến độ sưu tầm: <span id="fishpediaProgress">0/18 (0%)</span></span>
+            </div>
+            <div id="fishpediaBody" class="fish-list"></div>
+        </div>
+
+        <!-- Nhiệm vụ -->
+        <div id="questsModal" class="inventory-ui modal-wide">
+            <div class="inventory-header">
+                <h2>📜 NHIỆM VỤ</h2>
+                <button id="closeQuests">✖</button>
+            </div>
+            <div id="questsBody" class="fish-list"></div>
+            <div class="inventory-footer">
+                <button id="resetQuestsBtn">Làm mới nhiệm vụ đã nhận</button>
             </div>
         </div>
 

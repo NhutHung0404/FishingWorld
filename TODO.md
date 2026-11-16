@@ -25,10 +25,10 @@
 - [x] Nâng cấp animation bước đi/vung cần của `Player.js`, dây câu Bezier của `FishingRod.js` và bộ âm thanh `AudioManager.js`.
 
 ### Phase 3: Chiều sâu Gameplay — Shop, Nâng cấp, Cá đa dạng & Mini-game
-- [ ] Mở rộng `FishDatabase.js` (15–20+ loài theo khu vực, giờ, thời tiết, trọng lượng ngẫu nhiên).
-- [ ] Xây dựng `FishpediaSystem.js`, `ItemDatabase.js`, `EquipmentSystem.js`, `ShopSystem.js`, `ProgressionSystem.js`, `QuestSystem.js`.
-- [ ] Đặt NPC Thương nhân để mua cần câu, mồi câu, nâng cấp sức chứa túi cá.
-- [ ] Nâng cấp `FishingMiniGame.js` (vùng mục tiêu ngẫu nhiên, vùng Perfect/Crit, cơ chế căng dây với cá hiếm, hỗ trợ Click/Tap).
+- [x] Mở rộng `FishDatabase.js` (15–20+ loài theo khu vực, giờ, thời tiết, trọng lượng ngẫu nhiên).
+- [x] Xây dựng `FishpediaSystem.js`, `ItemDatabase.js`, `EquipmentSystem.js`, `ShopSystem.js`, `ProgressionSystem.js`, `QuestSystem.js`.
+- [x] Đặt NPC Thương nhân để mua cần câu, mồi câu, nâng cấp sức chứa túi cá.
+- [x] Nâng cấp `FishingMiniGame.js` (vùng mục tiêu ngẫu nhiên, vùng Perfect/Crit, cơ chế căng dây với cá hiếm, hỗ trợ Click/Tap).
 
 ### Phase 4: UI/UX hiện đại, Cloud Sync & Tối ưu hoàn thiện
 - [ ] Thiết kế lại HUD và các Modal UI (`ShopUI`, `FishpediaUI`, `SettingsUI`, `ToastManager`, lọc/khóa cá trong `InventoryUI`).

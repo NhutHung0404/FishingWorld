@@ -16,6 +16,13 @@ import { LightingSystem } from "../systems/LightingSystem.js";
 import { FishingUI } from "../ui/FishingUI.js";
 import { InventoryUI } from "../ui/InventoryUI.js";
 import { HUD } from "../ui/HUD.js";
+import { Phase3ModalsUI } from "../ui/Phase3ModalsUI.js";
+import { EquipmentSystem } from "../systems/EquipmentSystem.js";
+import { ProgressionSystem } from "../systems/ProgressionSystem.js";
+import { FishpediaSystem } from "../systems/FishpediaSystem.js";
+import { QuestSystem } from "../systems/QuestSystem.js";
+import { ShopSystem } from "../systems/ShopSystem.js";
+import { ZONE_LABELS } from "../fishing/FishDatabase.js";
 
 export class Game {
     constructor({ canvas, ui, eventBus, authService, saveManager }) {
@@ -40,6 +47,16 @@ export class Game {
         this.fishingSystem = new FishingSystem(this.eventBus);
         this.fishingMiniGame = new FishingMiniGame();
         this.inventory = new Inventory(this.eventBus);
+        this.equipment = new EquipmentSystem(this.eventBus);
+        this.progression = new ProgressionSystem(this.eventBus);
+        this.fishpedia = new FishpediaSystem(this.eventBus);
+        this.questSystem = new QuestSystem(this.eventBus);
+        this.shopSystem = new ShopSystem({
+            inventory: this.inventory,
+            equipment: this.equipment,
+            progression: this.progression,
+            eventBus: this.eventBus
+        });
         this.audioManager = new AudioManager();
         this.timeManager = new TimeManager();
         this.weatherSystem = new WeatherSystem();
@@ -53,12 +70,35 @@ export class Game {
         this.fishingUI = new FishingUI({
             fishingPanel: this.ui.fishingPanel,
             timingUI: this.ui.timingUI,
+            timingTrack: this.ui.timingTrack,
             timingMarker: this.ui.timingMarker,
             timingScoreText: this.ui.timingScoreText,
             comboText: this.ui.comboText,
             fishingTimer: this.ui.fishingTimer,
             targetElements: this.ui.targetElements,
-            fishingStatus: this.ui.fishingStatus
+            fishingStatus: this.ui.fishingStatus,
+            tensionBox: this.ui.tensionBox,
+            tensionFill: this.ui.tensionFill,
+            tensionText: this.ui.tensionText,
+            reelBtn: this.ui.reelBtn
+        });
+
+        this.modalsUI = new Phase3ModalsUI({
+            shopModal: this.ui.shopModal,
+            shopGold: this.ui.shopGold,
+            shopBody: this.ui.shopBody,
+            closeShopBtn: this.ui.closeShop,
+            openShopBtn: this.ui.shopBtn,
+            fishpediaModal: this.ui.fishpediaModal,
+            fishpediaProgress: this.ui.fishpediaProgress,
+            fishpediaBody: this.ui.fishpediaBody,
+            closeFishpediaBtn: this.ui.closeFishpedia,
+            openFishpediaBtn: this.ui.fishpediaBtn,
+            questsModal: this.ui.questsModal,
+            questsBody: this.ui.questsBody,
+            closeQuestsBtn: this.ui.closeQuests,
+            openQuestsBtn: this.ui.questsBtn,
+            resetQuestsBtn: this.ui.resetQuestsBtn
         });
 
         this.inventoryUI = new InventoryUI({
@@ -78,11 +118,14 @@ export class Game {
             playerNameEl: this.ui.playerNameEl,
             timeDisplayEl: this.ui.timeDisplayEl,
             weatherDisplayEl: this.ui.weatherDisplayEl,
+            levelDisplayEl: this.ui.levelDisplayEl,
             topGoldEl: this.ui.topGoldEl,
             saveStatusEl: this.ui.saveStatusEl,
             fishCountEl: this.ui.fishCountEl,
             goldEl: this.ui.goldEl,
             inventoryCountEl: this.ui.inventoryCount,
+            equipDisplayEl: this.ui.equipDisplayEl,
+            questBadgeEl: this.ui.questBadgeEl,
             messageEl: this.ui.messageEl
         });
 
@@ -123,12 +166,48 @@ export class Game {
             onSellAll: () => this.sellAllFish()
         });
 
+        this.fishingUI.bindPressHandler(() => this.pressTimingButton());
+
+        this.modalsUI.bindEvents({
+            onOpenShop: () => this.openShop(),
+            onOpenFishpedia: () => this.openFishpedia(),
+            onOpenQuests: () => this.openQuests(),
+            onCloseModal: () => this.closeAllModals(),
+            onShopAction: (action, id) => this.handleShopAction(action, id),
+            onClaimQuest: (questId) => this.handleClaimQuest(questId),
+            onResetQuests: () => {
+                if (this.questSystem.resetCompletedQuests()) {
+                    this.modalsUI.renderQuests(this.questSystem);
+                    this.saveManager?.save(false);
+                }
+            }
+        });
+
         this.unsubscribers.push(
             this.eventBus.on("inventory:updated", (summary) => {
                 this.hud.updateInventorySummary(summary);
                 if (this.inventoryUI.isOpen()) {
                     this.inventoryUI.render(this.inventory);
                 }
+                if (this.modalsUI.shopModal?.style.display === "block") {
+                    this.modalsUI.renderShop(this.shopSystem, this.equipment, this.inventory, this.progression);
+                }
+            }),
+            this.eventBus.on("equipment:changed", (info) => {
+                this.hud.updateEquipment(info);
+            }),
+            this.eventBus.on("progression:updated", (summary) => {
+                this.hud.updateProgression(summary);
+            }),
+            this.eventBus.on("player:level_up", ({ newLevel }) => {
+                this.hud.showMessage(`🎉 Lên cấp! Bạn đã đạt Level ${newLevel}!`);
+                this.effectManager.addFloatingText(this.player.x, this.player.y - 50, `LEVEL UP! Lv.${newLevel}`, "#ffd54f");
+            }),
+            this.eventBus.on("fishpedia:new_discovery", ({ fish }) => {
+                this.hud.showMessage(`📖 Loài mới trong Sổ tay: ${fish.name}!`);
+            }),
+            this.eventBus.on("quests:updated", () => {
+                this.hud.updateQuestBadge(this.questSystem.getClaimableCount());
             }),
             this.eventBus.on("save:completed", () => {
                 this.hud.showSaveIndicator("💾 Đã lưu");
@@ -146,10 +225,13 @@ export class Game {
         return {
             player: {
                 ...this.player.toJSON(),
-                level: 1,
-                xp: 0
+                level: this.progression.level,
+                xp: this.progression.xp
             },
             inventory: this.inventory.toJSON(),
+            equipment: this.equipment.toJSON(),
+            fishpedia: this.fishpedia.toJSON(),
+            quests: this.questSystem.toJSON(),
             time: this.timeManager.toJSON(),
             stats: { ...this.stats }
         };
@@ -167,10 +249,23 @@ export class Game {
             if (Number.isFinite(px) && Number.isFinite(py) && this.world.canMoveTo(px, py)) {
                 this.player.setPosition(px, py, dir);
             }
+            this.progression.fromJSON(profile.player);
         }
 
         if (profile.inventory) {
             this.inventory.loadFromData(profile.inventory);
+        }
+
+        if (profile.equipment) {
+            this.equipment.fromJSON(profile.equipment);
+        }
+
+        if (profile.fishpedia) {
+            this.fishpedia.fromJSON(profile.fishpedia);
+        }
+
+        if (profile.quests) {
+            this.questSystem.fromJSON(profile.quests);
         }
 
         if (profile.time) {
@@ -196,6 +291,15 @@ export class Game {
             capacity: this.inventory.capacity,
             gold: this.inventory.gold
         });
+        this.hud.updateProgression(this.progression.getSummary());
+        this.hud.updateEquipment({
+            rod: this.equipment.getEquippedRod(),
+            bait: this.equipment.getEquippedBait(),
+            baitCount: this.equipment.equippedBaitId
+                ? this.equipment.getBaitCount(this.equipment.equippedBaitId)
+                : 0
+        });
+        this.hud.updateQuestBadge(this.questSystem.getClaimableCount());
     }
 
     setState(newState) {
@@ -272,9 +376,42 @@ export class Game {
             return;
         }
 
+        if (this.input.isJustPressed("f")) {
+            if (this.modalsUI.shopModal?.style.display === "block") {
+                this.closeAllModals();
+            } else if (this.state === GameState.EXPLORING) {
+                if (this.world.isNearMerchant(this.player.x, this.player.y)) {
+                    this.openShop();
+                } else {
+                    this.hud.showMessage("Hãy đến gần sạp Thương nhân cạnh bến gỗ để mua bán!");
+                }
+            }
+            return;
+        }
+
+        if (this.input.isJustPressed("p")) {
+            if (this.modalsUI.fishpediaModal?.style.display === "block") {
+                this.closeAllModals();
+            } else if (this.state === GameState.EXPLORING) {
+                this.openFishpedia();
+            }
+            return;
+        }
+
+        if (this.input.isJustPressed("q")) {
+            if (this.modalsUI.questsModal?.style.display === "block") {
+                this.closeAllModals();
+            } else if (this.state === GameState.EXPLORING) {
+                this.openQuests();
+            }
+            return;
+        }
+
         if (this.input.isJustPressed("escape")) {
             if (this.inventoryUI.isOpen()) {
                 this.closeInventory();
+            } else if (this.modalsUI.isAnyOpen()) {
+                this.closeAllModals();
             } else if (this.state === GameState.FISHING_WAITING) {
                 this.resetFishing();
                 this.hud.showMessage("Đã thu cần câu.");
@@ -303,7 +440,10 @@ export class Game {
 
     openInventory() {
         if (this.inventoryUI.isOpen()) return;
-        this.previousStateBeforeModal = this.state;
+        this.modalsUI.closeAll();
+        if (this.state !== GameState.UI_MODAL) {
+            this.previousStateBeforeModal = this.state;
+        }
         this.setState(GameState.UI_MODAL);
         this.inventoryUI.render(this.inventory);
         this.inventoryUI.open();
@@ -319,11 +459,81 @@ export class Game {
         );
     }
 
+    openShop() {
+        this.inventoryUI.close();
+        if (this.state !== GameState.UI_MODAL) {
+            this.previousStateBeforeModal = this.state;
+        }
+        this.setState(GameState.UI_MODAL);
+        this.modalsUI.openShop(this.shopSystem, this.equipment, this.inventory, this.progression);
+    }
+
+    openFishpedia() {
+        this.inventoryUI.close();
+        if (this.state !== GameState.UI_MODAL) {
+            this.previousStateBeforeModal = this.state;
+        }
+        this.setState(GameState.UI_MODAL);
+        this.modalsUI.openFishpedia(this.fishpedia);
+    }
+
+    openQuests() {
+        this.inventoryUI.close();
+        if (this.state !== GameState.UI_MODAL) {
+            this.previousStateBeforeModal = this.state;
+        }
+        this.setState(GameState.UI_MODAL);
+        this.modalsUI.openQuests(this.questSystem);
+    }
+
+    closeAllModals() {
+        this.modalsUI.closeAll();
+        if (this.state === GameState.UI_MODAL && !this.inventoryUI.isOpen()) {
+            this.setState(
+                this.previousStateBeforeModal === GameState.UI_MODAL
+                    ? GameState.EXPLORING
+                    : this.previousStateBeforeModal
+            );
+        }
+    }
+
+    handleShopAction(action, id) {
+        let res = { success: false, message: "" };
+        if (action === "rod") {
+            res = this.shopSystem.buyOrEquipRod(id);
+        } else if (action === "bait") {
+            res = this.shopSystem.buyBait(id);
+        } else if (action === "equip_bait") {
+            res = this.shopSystem.equipBait(id || null);
+        } else if (action === "bag") {
+            res = this.shopSystem.buyBagUpgrade();
+        }
+
+        if (res.message) this.hud.showMessage(res.message);
+        if (res.success) {
+            this.modalsUI.renderShop(this.shopSystem, this.equipment, this.inventory, this.progression);
+            this.saveManager?.save(false);
+        }
+    }
+
+    handleClaimQuest(questId) {
+        const res = this.questSystem.claimQuest(questId, {
+            inventory: this.inventory,
+            progression: this.progression
+        });
+        if (res.success) {
+            this.hud.showMessage(`🎁 Nhận thưởng: +${res.rewardGold}G, +${res.rewardXp} XP!`);
+            this.modalsUI.renderQuests(this.questSystem);
+            this.saveManager?.save(false);
+        }
+    }
+
     sellFish(index) {
         const fish = this.inventory.sellFish(index);
         if (!fish) return;
 
         this.stats.totalSoldGold += fish.price;
+        this.questSystem.onFishSold(fish.price);
         this.saveManager?.save(false);
         this.hud.showMessage(`Đã bán ${fish.name}! +${fish.price} vàng`);
     }
@@ -336,6 +546,7 @@ export class Game {
         }
 
         this.stats.totalSoldGold += totalMoney;
+        this.questSystem.onFishSold(totalMoney);
         this.saveManager?.save(false);
         this.hud.showMessage(`Đã bán tất cả cá! +${totalMoney} vàng`);
     }
@@ -361,8 +572,12 @@ export class Game {
             this.player.direction
         );
 
-        const started = this.fishingSystem.startFishing(bobberPos);
+        const bonuses = this.equipment.getCombinedBonuses();
+        const started = this.fishingSystem.startFishing(bobberPos, bonuses);
         if (!started) return;
+
+        const zone = this.world.getFishingZone(bobberPos.x, bobberPos.y);
+        const zoneName = ZONE_LABELS[zone] || zone;
 
         this.effectManager.addWaterSplash(bobberPos.x, bobberPos.y, 6);
         this.effectManager.addWaterRipple(bobberPos.x, bobberPos.y, 25);
@@ -373,10 +588,10 @@ export class Game {
         this.fishingUI.showFishingPanel();
         this.fishingUI.showFishingTimerElement();
         this.fishingUI.hideTiming();
-        this.fishingUI.showFishingStatus("🎣 Đang chờ cá cắn câu...");
+        this.fishingUI.showFishingStatus(`🎣 Đang chờ cá tại ${zoneName}...`);
         this.fishingUI.showFishingTimer("Hãy kiên nhẫn chờ nhé! (Nhấn E để thu cần)");
 
-        this.hud.showMessage("Bạn đã ném cần câu!");
+        this.hud.showMessage(`Bạn đã ném cần câu tại ${zoneName}!`);
     }
 
     updateFishing(deltaTime) {
@@ -406,17 +621,29 @@ export class Game {
     startTimingGame() {
         if (this.state === GameState.FISHING_MINIGAME) return;
 
-        const currentFish = this.fishingSystem.selectFish();
+        const bonuses = this.equipment.getCombinedBonuses();
+        const zone = this.world.getFishingZone(this.fishingSystem.bobberX, this.fishingSystem.bobberY);
+        const timePhase = this.timeManager.getPhase();
+        const weather = this.weatherSystem.type;
+
+        const currentFish = this.fishingSystem.selectFish({
+            zone,
+            timePhase,
+            weather,
+            luckBonus: bonuses.luckBonus
+        });
+
+        // Tiêu hao 1 mồi câu nếu đang gắn
+        this.equipment.consumeBait();
+
         this.fishingSystem.enterTiming();
         this.setState(GameState.FISHING_MINIGAME);
 
-        this.fishingMiniGame.start(currentFish);
-        const scale = this.fishingMiniGame.getTargetScale(currentFish);
-
-        this.fishingUI.configureTargets(this.fishingMiniGame, scale);
+        this.fishingMiniGame.start(currentFish, bonuses);
+        this.fishingUI.configureTargets(this.fishingMiniGame);
         this.fishingUI.showTiming();
-        this.fishingUI.showFishingStatus(`🐟 ${currentFish.name} đang cắn câu!`);
-        this.fishingUI.showFishingTimer("Canh trục chạy và nhấn SPACE!");
+        this.fishingUI.showFishingStatus(`🐟 ${currentFish.name} [${currentFish.rarity}] đang cắn câu!`);
+        this.fishingUI.showFishingTimer("Canh trục chạy và nhấn SPACE hoặc Click!");
         this.fishingUI.updateTiming(this.fishingMiniGame);
     }
 
@@ -425,13 +652,15 @@ export class Game {
             return;
         }
 
-        const timeOut = this.fishingMiniGame.update(deltaTime);
+        const { timedOut, snapped } = this.fishingMiniGame.update(deltaTime);
         this.fishingUI.updateTiming(this.fishingMiniGame);
         this.fishingUI.showFishingTimer(
             `Thời gian: ${Math.max(0, this.fishingMiniGame.timeLeft).toFixed(1)}s`
         );
 
-        if (timeOut) {
+        if (snapped) {
+            this.failFishing("💥 Dây câu bị đứt vì quá căng!");
+        } else if (timedOut) {
             this.failFishing();
         }
     }
@@ -439,16 +668,23 @@ export class Game {
     pressTimingButton() {
         if (this.state !== GameState.FISHING_MINIGAME) return;
 
-        const result = this.fishingMiniGame.press(this.fishingSystem.currentFish);
+        const result = this.fishingMiniGame.press();
 
         if (result.hit) {
-            this.fishingUI.markTargetHit(result.index);
+            this.fishingUI.markTargetHit(result.index, result.perfect);
             this.audioManager.playHitSound();
             this.effectManager.triggerRodJerk();
             this.effectManager.addWaterRipple(this.fishingSystem.bobberX, this.fishingSystem.bobberY, 20);
-            this.camera.shake(2.5, 0.12);
-            this.hud.showMessage(`🎯 Chính xác! Combo x${result.combo}`);
-            this.effectManager.addFloatingText(this.player.x, this.player.y - 30, `Hit! x${result.combo}`, "#ffeb3b");
+            this.camera.shake(result.perfect ? 3.5 : 2.5, 0.14);
+
+            if (result.perfect) {
+                this.questSystem.onPerfectHit(1);
+                this.hud.showMessage(`✨ PERFECT! Combo x${result.combo}`);
+                this.effectManager.addFloatingText(this.player.x, this.player.y - 34, `PERFECT! +2`, "#ffd54f");
+            } else {
+                this.hud.showMessage(`🎯 Chính xác! Combo x${result.combo}`);
+                this.effectManager.addFloatingText(this.player.x, this.player.y - 30, `Hit! x${result.combo}`, "#ffeb3b");
+            }
         } else {
             this.audioManager.playMissSound();
             this.hud.showMessage("❌ Trượt rồi! Combo đã bị mất!");
@@ -456,6 +692,11 @@ export class Game {
         }
 
         this.fishingUI.updateTiming(this.fishingMiniGame);
+
+        if (result.snapped) {
+            this.failFishing("💥 Dây câu bị đứt vì quá căng!");
+            return;
+        }
 
         if (result.completed) {
             this.fishingUI.hideTiming();
@@ -473,15 +714,22 @@ export class Game {
         this.audioManager.playCatchSound();
         this.effectManager.triggerFishJump();
         this.effectManager.addWaterSplash(this.fishingSystem.bobberX, this.fishingSystem.bobberY, 15);
-        this.effectManager.addFloatingText(this.player.x, this.player.y - 40, `+1 ${fish.name}!`, "#4caf50");
+        this.effectManager.addFloatingText(this.player.x, this.player.y - 40, `+1 ${fish.name} (${fish.weight}kg)!`, "#4caf50");
         this.camera.shake(4.5, 0.22);
 
         const added = this.inventory.addFish(fish);
         if (added) {
             this.stats.totalCaught += 1;
+            const xpGain = (fish.xp || 10) + this.fishingMiniGame.perfectHits * 5;
+            this.progression.addXp(xpGain);
+            this.fishpedia.recordCatch(fish);
+            this.questSystem.onFishCaught(fish, {
+                timePhase: this.timeManager.getPhase(),
+                weather: this.weatherSystem.type
+            });
             this.saveManager?.save(false);
-            this.fishingUI.showFishingStatus(`🎉 CÂU ĐƯỢC ${fish.name}!`);
-            this.hud.showMessage(`🎣 Câu được ${fish.name}!`);
+            this.fishingUI.showFishingStatus(`🎉 CÂU ĐƯỢC ${fish.name} (${fish.weight}kg)!`);
+            this.hud.showMessage(`🎣 Câu được ${fish.name} (${fish.weight} kg | +${xpGain} XP)!`);
         } else {
             this.fishingUI.showFishingStatus("🎒 Túi cá đã đầy!");
             this.hud.showMessage("Túi cá đã đầy, không thể giữ thêm!");
@@ -495,12 +743,12 @@ export class Game {
         this.resultTimeout = setTimeout(() => this.resetFishing(), 2200);
     }
 
-    failFishing() {
+    failFishing(reason = "😢 Cá đã chạy mất!") {
         this.fishingSystem.enterResult();
         this.setState(GameState.FISHING_RESULT);
 
         this.fishingUI.hideTiming();
-        this.fishingUI.showFishingStatus("😢 Cá đã chạy mất!");
+        this.fishingUI.showFishingStatus(reason);
         this.fishingUI.showFishingTimer("Hãy thử lại nhé!");
         this.hud.showMessage("Rất tiếc bạn đã để cá thoát.");
 

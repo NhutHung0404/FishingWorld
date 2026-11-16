@@ -1,9 +1,51 @@
+const AUDIO_SETTINGS_KEY = "fishingworld_audio_settings";
+
 export class AudioManager {
     constructor() {
         this.audioContext = null;
+        this.muted = false;
+        this.volume = 0.7;
+        this.loadSettings();
+    }
+
+    loadSettings() {
+        try {
+            const raw = window.localStorage.getItem(AUDIO_SETTINGS_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (typeof parsed.muted === "boolean") this.muted = parsed.muted;
+            if (Number.isFinite(Number(parsed.volume))) {
+                this.volume = Math.max(0, Math.min(1, Number(parsed.volume)));
+            }
+        } catch {
+            // ignore storage errors
+        }
+    }
+
+    saveSettings() {
+        try {
+            window.localStorage.setItem(
+                AUDIO_SETTINGS_KEY,
+                JSON.stringify({ muted: this.muted, volume: this.volume })
+            );
+        } catch {
+            // ignore storage errors
+        }
+    }
+
+    setMuted(muted) {
+        this.muted = Boolean(muted);
+        this.saveSettings();
+    }
+
+    setVolume(volume) {
+        this.volume = Math.max(0, Math.min(1, Number(volume) || 0));
+        this.saveSettings();
     }
 
     playSound(frequency, duration, type) {
+        if (this.muted || this.volume <= 0.01) return;
+
         const AudioContextClass =
             window.AudioContext || window.webkitAudioContext;
 
@@ -23,8 +65,9 @@ export class AudioManager {
         oscillator.type = type;
         oscillator.frequency.value = frequency;
 
+        const peakGain = 0.2 * this.volume;
         gain.gain.setValueAtTime(
-            0.15,
+            peakGain,
             this.audioContext.currentTime
         );
 

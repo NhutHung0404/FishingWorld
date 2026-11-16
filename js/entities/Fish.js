@@ -15,6 +15,7 @@ export class Fish {
         this.xp = extra.xp ?? 10;
         this.description = extra.description || "";
         this.caughtAt = extra.caughtAt || null;
+        this.locked = Boolean(extra.locked);
     }
 
     createId(name) {
@@ -63,7 +64,8 @@ export class Fish {
                 weathers: this.weathers,
                 xp: this.xp,
                 description: this.description,
-                caughtAt: overrides.caughtAt ?? new Date().toISOString()
+                caughtAt: overrides.caughtAt ?? new Date().toISOString(),
+                locked: overrides.locked ?? this.locked
             }
         );
     }
@@ -80,7 +82,8 @@ export class Fish {
             maxWeight: this.maxWeight,
             weight: this.weight,
             xp: this.xp,
-            caughtAt: this.caughtAt
+            caughtAt: this.caughtAt,
+            locked: this.locked
         };
     }
 
@@ -98,7 +101,8 @@ export class Fish {
                 maxWeight: data.maxWeight ?? 2.5,
                 weight: data.weight ?? null,
                 xp: data.xp ?? 10,
-                caughtAt: data.caughtAt || null
+                caughtAt: data.caughtAt || null,
+                locked: Boolean(data.locked)
             }
         );
     }

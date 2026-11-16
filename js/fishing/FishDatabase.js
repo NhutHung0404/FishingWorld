@@ -53,6 +53,53 @@ export const fishList = [
         zones: ["DEEP_ROCKS", "SHORE"], timePhases: ["DAWN", "DUSK", "NIGHT"], weathers: ["MIST", "RAIN"],
         description: "Loài cá quý thịt chắc, hay nấp dưới đá."
     })
+    ,
+    new Fish("Cá lăng đuôi đỏ", "Rare", 75, 8.5, "large", {
+        minWeight: 2.5, maxWeight: 11.0, xp: 45,
+        zones: ["DEEP_ROCKS", "CENTER_LAKE"], timePhases: ["DUSK", "NIGHT"], weathers: ["RAIN", "CLEAR"],
+        description: "Cá da trơn cỡ lớn với chiếc đuôi đỏ rực đặc trưng."
+    }),
+    new Fish("Cá tầm hồ", "Rare", 85, 7.5, "large", {
+        minWeight: 3.0, maxWeight: 14.0, xp: 50,
+        zones: ["CENTER_LAKE", "DEEP_ROCKS"], timePhases: ["DAWN", "DAY", "NIGHT"], weathers: ["MIST", "CLEAR"],
+        description: "Loài cá cổ đại sống ở tầng nước sâu giữa hồ."
+    }),
+    new Fish("Cá hồi vân", "Rare", 70, 9.0, "medium", {
+        minWeight: 1.5, maxWeight: 5.5, xp: 42,
+        zones: ["DOCK", "CENTER_LAKE"], timePhases: ["DAWN", "DAY"], weathers: ["CLEAR", "RAIN"],
+        description: "Lớp vảy ánh sắc cầu vồng, bơi rất nhanh."
+    }),
+    new Fish("Cá sấu hỏa tiễn", "Rare", 95, 6.5, "large", {
+        minWeight: 4.0, maxWeight: 16.0, xp: 55,
+        zones: ["DEEP_ROCKS", "CENTER_LAKE"], timePhases: ["DAY", "DUSK"], weathers: ["CLEAR", "MIST"],
+        description: "Hàm răng sắc nhọn, kéo dây cực kỳ căng thẳng."
+    }),
+    new Fish("Cá vàng hoàng đế", "Epic", 160, 4.2, "small", {
+        minWeight: 0.5, maxWeight: 2.2, xp: 85,
+        zones: ["DOCK", "CENTER_LAKE"], timePhases: ["DAWN", "DAY"], weathers: ["CLEAR"],
+        description: "Ánh kim rực rỡ dưới nắng, biểu tượng của sự may mắn."
+    }),
+    new Fish("Cá mặt trăng", "Epic", 190, 3.5, "medium", {
+        minWeight: 2.2, maxWeight: 7.5, xp: 95,
+        zones: ["CENTER_LAKE", "DEEP_ROCKS"], timePhases: ["NIGHT"], weathers: ["CLEAR", "MIST"],
+        description: "Chỉ phát sáng dịu nhẹ khi câu vào ban đêm."
+    }),
+    new Fish("Cá lôi công", "Epic", 210, 3.2, "large", {
+        minWeight: 3.5, maxWeight: 12.0, xp: 105,
+        zones: ["DEEP_ROCKS", "CENTER_LAKE"], timePhases: ["DAWN", "DUSK", "NIGHT"], weathers: ["RAIN"],
+        description: "Xuất hiện khi mưa giông kéo đến vùng đá sâu."
+    }),
+    new Fish("Cá rồng huyết long", "Legendary", 420, 1.8, "large", {
+        minWeight: 5.0, maxWeight: 18.0, xp: 200,
+        zones: ["CENTER_LAKE", "DEEP_ROCKS"], timePhases: ["DAWN", "DUSK", "NIGHT"], weathers: ["CLEAR", "RAIN", "MIST"],
+        description: "Vảy đỏ như ngọc, truyền thuyết của giới cần thủ."
+    }),
+    new Fish("Cá thần thoại Leviathan", "Mythical", 1200, 0.5, "large", {
+        minWeight: 12.0, maxWeight: 35.0, xp: 500,
+        zones: ["CENTER_LAKE", "DEEP_ROCKS"], timePhases: ["NIGHT", "DUSK"], weathers: ["RAIN", "MIST"],
+        description: "Sinh vật huyền bí chỉ lộ diện nơi nước sâu trong đêm sương hoặc mưa."
+    })
+
 ];
 
 const RARITY_LUCK_MULT = { Common: 0, Uncommon: 0.4, Rare: 1.0, Epic: 1.6, Legendary: 2.2, Mythical: 2.8 };

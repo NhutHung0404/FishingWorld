@@ -372,3 +372,126 @@ canvas {
     position: relative;
     z-index: 5;
 }
+
+/* Phase 3: Mini-game Perfect/Tension, Action Buttons & Modals */
+.timing-perfect {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: #ffd54f;
+    box-shadow: 0 0 6px #ffd54f;
+    pointer-events: none;
+}
+
+.timing-target.perfect {
+    box-shadow: 0 0 10px #ffd54f;
+}
+
+.tension-box {
+    margin-top: 8px;
+    text-align: left;
+}
+
+.tension-text {
+    font-size: 11px;
+    color: #ffe28a;
+    margin-bottom: 4px;
+}
+
+.tension-bar {
+    width: 100%;
+    height: 10px;
+    background: #1b2a27;
+    border: 1px solid #9bd7c1;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.tension-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.08s linear;
+}
+
+.reel-btn {
+    margin-top: 8px;
+    padding: 7px 16px;
+    background: #e1a33e;
+    color: #fff;
+    border: 2px solid #754a27;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.equip-display {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #cde8c7;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    background: #263c30;
+}
+
+.modal-wide {
+    width: 520px;
+}
+
+.modal-section {
+    margin-bottom: 14px;
+}
+
+.modal-section h3 {
+    font-size: 15px;
+    color: #ffe28a;
+    margin-bottom: 8px;
+}
+
+.shop-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: #3c594b;
+    border: 1px solid #78977c;
+    border-radius: 5px;
+    font-size: 13px;
+}
+
+.shop-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.shop-row button,
+#resetQuestsBtn {
+    padding: 6px 10px;
+    background: #d99b45;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.shop-row button:disabled {
+    background: #556b5e;
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
+.shop-row button.claim-btn {
+    background: #4caf50;
+}
+
+.fish-item.unknown {
+    opacity: 0.7;
+}

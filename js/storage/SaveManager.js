@@ -1,4 +1,4 @@
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export class SaveManager {
     constructor({
@@ -47,8 +47,16 @@ export class SaveManager {
                 fishList: []
             },
             equipment: {
+                ownedRods: ["wooden_rod"],
                 rodId: "wooden_rod",
+                baitCounts: {},
                 baitId: null
+            },
+            fishpedia: {
+                entries: {}
+            },
+            quests: {
+                quests: []
             },
             stats: {
                 totalCaught: 0,
@@ -82,6 +90,14 @@ export class SaveManager {
             equipment: {
                 ...defaults.equipment,
                 ...(rawProfile.equipment || {})
+            },
+            fishpedia: {
+                ...defaults.fishpedia,
+                ...(rawProfile.fishpedia || {})
+            },
+            quests: {
+                ...defaults.quests,
+                ...(rawProfile.quests || {})
             },
             stats: {
                 ...defaults.stats,

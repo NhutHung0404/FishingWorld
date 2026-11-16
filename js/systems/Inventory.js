@@ -26,10 +26,19 @@ export class Inventory {
         return true;
     }
 
+    // Khóa / mở khóa cá
+    toggleLock(index) {
+        const fish = this.fishList[index];
+        if (!fish) return null;
+        fish.locked = !fish.locked;
+        this.emitChanged();
+        return fish;
+    }
+
     // Bán một con cá
     sellFish(index) {
         const fish = this.fishList[index];
-        if (!fish) return null;
+        if (!fish || fish.locked) return null;
 
         this.gold += fish.price;
         this.fishList.splice(index, 1);
@@ -39,21 +48,42 @@ export class Inventory {
         return fish;
     }
 
-    // Bán tất cả cá
-    sellAllFish() {
-        if (this.fishList.length === 0) return 0;
+    // Bán tất cả cá không bị khóa
+    sellAllUnlocked() {
+        if (this.fishList.length === 0) {
+            return { totalMoney: 0, soldCount: 0, skippedLocked: 0 };
+        }
 
         let totalMoney = 0;
+        let soldCount = 0;
+        let skippedLocked = 0;
+        const remaining = [];
+
         for (const fish of this.fishList) {
-            totalMoney += fish.price;
+            if (fish.locked) {
+                remaining.push(fish);
+                skippedLocked += 1;
+            } else {
+                totalMoney += fish.price;
+                soldCount += 1;
+            }
+        }
+
+        if (soldCount === 0) {
+            return { totalMoney: 0, soldCount: 0, skippedLocked };
         }
 
         this.gold += totalMoney;
-        this.fishList.length = 0;
+        this.fishList = remaining;
 
         this.emitChanged();
         this.eventBus?.emit("gold:changed", { gold: this.gold, delta: totalMoney });
-        return totalMoney;
+        return { totalMoney, soldCount, skippedLocked };
+    }
+
+    // Bán tất cả cá (tương thích ngược)
+    sellAllFish() {
+        return this.sellAllUnlocked().totalMoney;
     }
 
     // Lấy số lượng cá

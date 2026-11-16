@@ -15,12 +15,12 @@ export class FishingSystem {
         this.currentFish = null;
     }
 
-    selectFish() {
-        this.currentFish = getRandomFish();
+    selectFish(context = {}) {
+        this.currentFish = getRandomFish(context);
         return this.currentFish;
     }
 
-    startFishing(bobberPosition) {
+    startFishing(bobberPosition, bonuses = {}) {
         if (this.state !== "idle") {
             return false;
         }
@@ -28,8 +28,10 @@ export class FishingSystem {
         this.active = true;
         this.state = "waiting";
 
-        // Thời gian chờ từ 4 đến 11 giây
-        this.waitTime = 4 + Math.random() * 7;
+        // Thời gian chờ từ 4 đến 11 giây, giảm theo biteSpeedBonus
+        const baseWait = 4 + Math.random() * 7;
+        const speedBonus = Math.min(0.6, Math.max(0, bonuses.biteSpeedBonus || 0));
+        this.waitTime = Math.max(1.8, baseWait * (1 - speedBonus));
         this.biteTime = 0;
         this.blinkTimer = 0;
         this.blink = false;

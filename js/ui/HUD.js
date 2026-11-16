@@ -8,6 +8,9 @@ export class HUD {
         this.fishCountEl = elements.fishCountEl;
         this.goldEl = elements.goldEl;
         this.inventoryCountEl = elements.inventoryCountEl;
+        this.levelDisplayEl = elements.levelDisplayEl || null;
+        this.equipDisplayEl = elements.equipDisplayEl || null;
+        this.questBadgeEl = elements.questBadgeEl || null;
         this.messageEl = elements.messageEl;
 
         this.messageTimeout = null;
@@ -41,6 +44,25 @@ export class HUD {
         }
         if (this.topGoldEl) {
             this.topGoldEl.textContent = `🪙 ${gold} Gold`;
+        }
+    }
+
+    updateProgression({ level, xp, nextXp }) {
+        if (this.levelDisplayEl) {
+            this.levelDisplayEl.textContent = `⭐ Lv.${level} (${xp}/${nextXp})`;
+        }
+    }
+
+    updateEquipment({ rod, bait, baitCount }) {
+        if (this.equipDisplayEl) {
+            const baitText = bait ? `${bait.name} (${baitCount})` : "Không mồi";
+            this.equipDisplayEl.textContent = `🎣 ${rod.name} | 🪱 ${baitText}`;
+        }
+    }
+
+    updateQuestBadge(count) {
+        if (this.questBadgeEl) {
+            this.questBadgeEl.textContent = count > 0 ? ` (${count})` : "";
         }
     }
 
