@@ -12,6 +12,7 @@ function collectUIElements() {
         timeDisplayEl: document.getElementById("timeDisplay"),
         weatherDisplayEl: document.getElementById("weatherDisplay"),
         levelDisplayEl: document.getElementById("levelDisplay"),
+        topXpBar: document.getElementById("topXpBar"),
         playerNameEl: document.getElementById("playerName"),
         topGoldEl: document.getElementById("topGold"),
         saveStatusEl: document.getElementById("saveStatus"),

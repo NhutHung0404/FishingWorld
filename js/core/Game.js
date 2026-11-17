@@ -119,6 +119,7 @@ export class Game {
             timeDisplayEl: this.ui.timeDisplayEl,
             weatherDisplayEl: this.ui.weatherDisplayEl,
             levelDisplayEl: this.ui.levelDisplayEl,
+            topXpBar: this.ui.topXpBar,
             topGoldEl: this.ui.topGoldEl,
             saveStatusEl: this.ui.saveStatusEl,
             fishCountEl: this.ui.fishCountEl,

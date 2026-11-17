@@ -27,30 +27,103 @@ body {
 }
 
 .top-bar {
-    padding: 15px 20px;
-    background: #355b40;
-
+    padding: 12px 18px;
+    background: linear-gradient(180deg, #2b4c3b 0%, #1f372b 100%);
+    border-bottom: 3px solid #52795c;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .top-bar h1 {
-    font-size: 22px;
+    font-size: 20px;
     color: #ffe8a3;
+    text-shadow: 2px 2px 0 #13211a;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
 }
 
 .player-info {
     display: flex;
-    gap: 20px;
-    font-size: 14px;
+    gap: 10px;
+    font-size: 13px;
     align-items: center;
+    flex-wrap: wrap;
+}
+
+.player-info > span,
+.level-container {
+    background: #172b22;
+    border: 1px solid #4c7356;
+    border-radius: 6px;
+    padding: 5px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.level-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 4px 10px;
+}
+
+#levelDisplay {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffe28a;
+}
+
+.xp-bar-mini {
+    width: 100%;
+    min-width: 90px;
+    height: 5px;
+    background: #0d1914;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid #355740;
+}
+
+.xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4caf50, #ffd54f);
+    transition: width 0.3s ease;
+}
+
+#topGold {
+    color: #ffd54f;
+    font-weight: bold;
+    border-color: #8c6d2f;
+}
+
+#topGold.gold-gain {
+    animation: goldPulseGain 0.45s ease;
+}
+
+#topGold.gold-loss {
+    animation: goldPulseLoss 0.45s ease;
+}
+
+@keyframes goldPulseGain {
+    0% { transform: scale(1); background-color: #172b22; }
+    40% { transform: scale(1.08); background-color: #2e5932; color: #fff59d; }
+    100% { transform: scale(1); background-color: #172b22; }
+}
+
+@keyframes goldPulseLoss {
+    0% { transform: scale(1); background-color: #172b22; }
+    40% { transform: scale(0.96); background-color: #592e2e; color: #ffab91; }
+    100% { transform: scale(1); background-color: #172b22; }
 }
 
 .save-status {
     font-size: 12px;
     color: #cde8c7;
-    opacity: 0.75;
+    opacity: 0.85;
     transition: opacity 0.2s ease;
 }
 
@@ -94,20 +167,37 @@ canvas {
     color: #e2efcf;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .top-bar {
         flex-direction: column;
-        gap: 10px;
+        align-items: stretch;
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .top-bar h1 {
+        text-align: center;
+        font-size: 18px;
     }
 
     .player-info {
-        flex-wrap: wrap;
         justify-content: center;
+        gap: 6px;
+        font-size: 12px;
     }
 
     .bottom-bar {
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
+        text-align: center;
+        padding: 10px 12px;
+    }
+
+    .fish-inventory {
+        bottom: 8px;
+        left: 8px;
+        padding: 7px 10px;
+        font-size: 11px;
     }
 }
 
@@ -144,13 +234,15 @@ canvas {
     left: 12px;
 
     padding: 10px 14px;
-    background: #183d39dd;
-    border: 2px solid #9bd7c1;
+    background: rgba(18, 43, 38, 0.9);
+    border: 2px solid #7fc4a9;
     border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
 
     color: white;
     font-size: 13px;
     z-index: 5;
+    backdrop-filter: blur(4px);
 }
 
 /* MINI GAME KEO CA */
@@ -243,67 +335,94 @@ canvas {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 420px;
-    max-width: 90%;
+    width: 460px;
+    max-width: 92%;
+    max-height: 86vh;
     padding: 18px;
-    background: #263d35;
-    border: 4px solid #d9ae69;
-    border-radius: 10px;
+    background: #1e332b;
+    border: 3px solid #d9ae69;
+    border-radius: 12px;
     color: white;
-    box-shadow: 0 0 20px #0009;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75);
 }
 
 .inventory-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 2px solid #d9ae69;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #52795c;
     margin-bottom: 12px;
 }
 
 .inventory-header h2 {
-    font-size: 20px;
+    font-size: 18px;
+    color: #ffe8a3;
 }
 
 .inventory-header button {
     background: #bd4848;
     color: white;
     border: none;
-    padding: 7px 10px;
+    border-radius: 6px;
+    padding: 6px 11px;
     cursor: pointer;
+    font-weight: bold;
+    transition: background 0.15s ease;
+}
+
+.inventory-header button:hover {
+    background: #d65555;
 }
 
 .inventory-info {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 15px;
+    align-items: center;
+    padding: 8px 12px;
+    background: #15261f;
+    border: 1px solid #3c594b;
+    border-radius: 6px;
+    margin-bottom: 12px;
     color: #ffe28a;
+    font-size: 14px;
 }
 
 .fish-list {
-    max-height: 260px;
+    max-height: 280px;
     overflow-y: auto;
+    padding-right: 4px;
 }
 
 .fish-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
-    padding: 10px;
+    gap: 10px;
+    padding: 10px 12px;
     margin-bottom: 8px;
-    background: #3c594b;
-    border: 1px solid #78977c;
-    border-radius: 5px;
+    background: #2b473b;
+    border: 1px solid #557a62;
+    border-radius: 6px;
+    transition: border-color 0.15s ease;
+}
+
+.fish-item:hover {
+    border-color: #9bd7c1;
 }
 
 .fish-item button {
     background: #d99b45;
     color: white;
     border: none;
-    border-radius: 4px;
-    padding: 7px;
+    border-radius: 5px;
+    padding: 7px 12px;
     cursor: pointer;
+    font-weight: bold;
+}
+
+.fish-item button:hover:not(:disabled) {
+    background: #e8aa54;
 }
 
 .inventory-footer {
