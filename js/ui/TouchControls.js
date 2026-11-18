@@ -31,11 +31,9 @@ export class TouchControls {
     }
 
     isTouchDevice() {
-        return (
-            window.matchMedia?.("(pointer: coarse)").matches ||
-            "ontouchstart" in window ||
-            navigator.maxTouchPoints > 0 ||
-            window.innerWidth <= 1024
+        return Boolean(
+            window.matchMedia?.("(hover: none) and (pointer: coarse)")?.matches ||
+            window.matchMedia?.("(hover: none) and (any-pointer: coarse)")?.matches
         );
     }
 
