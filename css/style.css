@@ -770,7 +770,7 @@ canvas {
         box-shadow: none;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        justify-content: flex-start;
     }
 
     /* HUD Top Bar Mobile */
@@ -881,7 +881,7 @@ canvas {
 }
 
 /* PORTRAIT MODE SPECIFICS */
-@media ((hover: none) and (pointer: coarse) and (orientation: portrait)), ((hover: none) and (any-pointer: coarse) and (orientation: portrait)) {
+@media (hover: none) and (pointer: coarse) and (orientation: portrait), (hover: none) and (any-pointer: coarse) and (orientation: portrait) {
     .game-screen {
         align-items: flex-start;
     }
@@ -918,7 +918,7 @@ canvas {
 }
 
 /* LANDSCAPE MODE SPECIFICS */
-@media ((hover: none) and (pointer: coarse) and (orientation: landscape)), ((hover: none) and (any-pointer: coarse) and (orientation: landscape)) {
+@media (hover: none) and (pointer: coarse) and (orientation: landscape), (hover: none) and (any-pointer: coarse) and (orientation: landscape) {
     .game-screen {
         align-items: center;
     }
