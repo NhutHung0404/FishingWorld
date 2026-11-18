@@ -17,6 +17,7 @@ import { FishingUI } from "../ui/FishingUI.js";
 import { InventoryUI } from "../ui/InventoryUI.js";
 import { HUD } from "../ui/HUD.js";
 import { Phase3ModalsUI } from "../ui/Phase3ModalsUI.js";
+import { TouchControls } from "../ui/TouchControls.js";
 import { EquipmentSystem } from "../systems/EquipmentSystem.js";
 import { ProgressionSystem } from "../systems/ProgressionSystem.js";
 import { FishpediaSystem } from "../systems/FishpediaSystem.js";
@@ -39,6 +40,7 @@ export class Game {
         this.previousStateBeforeModal = GameState.EXPLORING;
 
         this.input = new Input();
+        this.touchControls = new TouchControls(this.input);
         this.world = new World();
         this.player = new Player(900, 720);
         this.camera = new Camera(this.canvas, this.world.width, this.world.height);
@@ -156,6 +158,9 @@ export class Game {
 
         this.camera.follow(this.player, null, true);
         this.syncHud();
+        if (this.touchControls.isTouchDevice()) {
+            this.touchControls.show();
+        }
         this.hud.showMessage("Chào mừng đến Fishing World! Nhấn E gần hồ để câu cá.");
     }
 
@@ -305,6 +310,10 @@ export class Game {
 
     setState(newState) {
         this.state = newState;
+        this.touchControls?.updateForState(newState);
+        if (newState === GameState.UI_MODAL) {
+            this.touchControls?.releaseAll();
+        }
     }
 
     start() {
@@ -853,6 +862,7 @@ export class Game {
         this.stop();
         clearTimeout(this.resultTimeout);
         this.input.destroy();
+        this.touchControls?.destroy();
         this.hud.destroy();
         this.saveManager?.destroy();
 

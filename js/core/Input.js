@@ -2,6 +2,8 @@ export class Input {
     constructor() {
         this.keys = {};
         this.previousKeys = {};
+        this.virtualKeys = {};
+        this.previousVirtualKeys = {};
 
         this._onKeyDown = (e) => {
             if (this.isFormInputFocused()) {
@@ -50,14 +52,21 @@ export class Input {
         return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || active.isContentEditable;
     }
 
+    setVirtualKey(key, isPressed) {
+        const normalized = this.normalizeKey(key);
+        this.virtualKeys[normalized] = Boolean(isPressed);
+    }
+
     isPressed(key) {
-        return this.keys[this.normalizeKey(key)] === true;
+        const normalized = this.normalizeKey(key);
+        return this.keys[normalized] === true || this.virtualKeys[normalized] === true;
     }
 
     isJustPressed(key) {
         const normalized = this.normalizeKey(key);
-        return this.keys[normalized] === true &&
-            this.previousKeys[normalized] !== true;
+        const current = this.keys[normalized] === true || this.virtualKeys[normalized] === true;
+        const previous = this.previousKeys[normalized] === true || this.previousVirtualKeys[normalized] === true;
+        return current && !previous;
     }
 
     anyPressed(keys) {
@@ -71,15 +80,23 @@ export class Input {
         for (const key in this.previousKeys) {
             this.previousKeys[key] = false;
         }
+        for (const key in this.virtualKeys) {
+            this.virtualKeys[key] = false;
+        }
+        for (const key in this.previousVirtualKeys) {
+            this.previousVirtualKeys[key] = false;
+        }
     }
 
     update() {
         this.previousKeys = { ...this.keys };
+        this.previousVirtualKeys = { ...this.virtualKeys };
     }
 
     destroy() {
         window.removeEventListener("keydown", this._onKeyDown);
         window.removeEventListener("keyup", this._onKeyUp);
         window.removeEventListener("blur", this._onBlur);
+        this.clear();
     }
 }

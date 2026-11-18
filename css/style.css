@@ -614,3 +614,164 @@ canvas {
 .fish-item.unknown {
     opacity: 0.7;
 }
+
+/* Phase 4.2: Mobile Touch Controls Styling */
+.touch-controls {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    display: none;
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    z-index: 10;
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+    padding-left: max(4px, env(safe-area-inset-left));
+    padding-right: max(4px, env(safe-area-inset-right));
+}
+
+.touch-dpad,
+.touch-actions {
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* D-Pad Styling */
+.touch-dpad {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.dpad-middle {
+    display: flex;
+    gap: 4px;
+}
+
+.dpad-btn {
+    width: 48px;
+    height: 48px;
+    background: rgba(23, 43, 34, 0.85);
+    border: 2px solid #52795c;
+    border-radius: 10px;
+    color: #ffe8a3;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    transition: background 0.1s ease, transform 0.1s ease, border-color 0.1s ease;
+}
+
+.dpad-btn:active,
+.dpad-btn.active {
+    background: rgba(82, 121, 92, 0.95);
+    border-color: #ffe8a3;
+    color: #ffffff;
+    transform: scale(0.92);
+}
+
+/* Action Buttons Styling */
+.touch-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.touch-action-btn {
+    width: 46px;
+    height: 46px;
+    background: rgba(23, 43, 34, 0.85);
+    border: 2px solid #52795c;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    transition: background 0.1s ease, transform 0.1s ease, border-color 0.1s ease;
+}
+
+.touch-action-btn.primary {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e1a33e 0%, #b87b28 100%);
+    border: 3px solid #ffe28a;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 15px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.touch-sub-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.touch-action-btn:active,
+.touch-action-btn.active {
+    background: rgba(82, 121, 92, 0.95);
+    border-color: #ffe8a3;
+    transform: scale(0.92);
+}
+
+.touch-action-btn.primary:active,
+.touch-action-btn.primary.active {
+    background: linear-gradient(135deg, #f5b041 0%, #d4ac0d 100%);
+    border-color: #ffffff;
+    transform: scale(0.92);
+}
+
+/* Responsive queries */
+@media (max-width: 768px) {
+    .touch-controls {
+        bottom: 8px;
+        left: 8px;
+        right: 8px;
+    }
+
+    .dpad-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 16px;
+    }
+
+    .touch-action-btn.primary {
+        width: 64px;
+        height: 64px;
+        font-size: 14px;
+    }
+
+    .touch-action-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 18px;
+    }
+}
+
+@media (min-width: 1025px) and (hover: hover) {
+    .touch-controls {
+        display: none !important;
+    }
+}
