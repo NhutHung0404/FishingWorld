@@ -615,13 +615,13 @@ canvas {
     opacity: 0.7;
 }
 
-/* Phase 4.2: Mobile Touch Controls Styling */
+/* Phase 4.2.1: Base Touch Controls Styling */
 .touch-controls {
     position: absolute;
     bottom: 12px;
     left: 12px;
     right: 12px;
-    display: none;
+    display: flex;
     justify-content: space-between;
     align-items: flex-end;
     pointer-events: none;
@@ -642,7 +642,7 @@ canvas {
     -webkit-user-select: none;
 }
 
-/* D-Pad Styling */
+/* D-Pad Base Styling */
 .touch-dpad {
     display: flex;
     flex-direction: column;
@@ -683,7 +683,7 @@ canvas {
     transform: scale(0.92);
 }
 
-/* Action Buttons Styling */
+/* Action Buttons Base Styling */
 .touch-actions {
     display: flex;
     flex-direction: column;
@@ -743,30 +743,207 @@ canvas {
     transform: scale(0.92);
 }
 
-/* Responsive queries */
-@media (max-width: 768px) {
-    .touch-controls {
-        bottom: 8px;
+/* Phase 4.2.1: Mobile Responsive Redesign (Portrait & Landscape) */
+
+@media (hover: none) and (pointer: coarse), (max-width: 1024px) {
+    html, body {
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        background: #17251f;
+    }
+
+    .game-container {
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 100%;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    /* HUD Top Bar Mobile */
+    .top-bar {
+        padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left));
+        gap: 6px;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(180deg, #213c2f 0%, #172b22 100%);
+        border-bottom: 2px solid #3c594b;
+        min-height: 38px;
+    }
+
+    .top-bar h1 {
+        font-size: 14px;
+        letter-spacing: 0px;
+    }
+
+    .player-info {
+        gap: 6px;
+        font-size: 11px;
+    }
+
+    #playerName,
+    .save-status {
+        display: none !important;
+    }
+
+    .level-container {
+        padding: 2px 6px;
+        gap: 2px;
+    }
+
+    #levelDisplay {
+        font-size: 11px;
+    }
+
+    .xp-bar-mini {
+        min-width: 50px;
+        height: 4px;
+    }
+
+    .player-info > span {
+        padding: 3px 6px;
+        font-size: 11px;
+    }
+
+    /* Game Screen & Canvas Mobile */
+    .game-screen {
+        flex: 1;
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: #14211a;
+    }
+
+    canvas {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        image-rendering: pixelated;
+    }
+
+    /* Hide desktop-only bars on mobile */
+    .bottom-bar,
+    .action-buttons {
+        display: none !important;
+    }
+
+    /* Compact Fish Inventory Overlay on Canvas */
+    .fish-inventory {
+        top: 8px;
         left: 8px;
-        right: 8px;
+        bottom: auto;
+        padding: 4px 8px;
+        font-size: 11px;
+        background: rgba(18, 43, 38, 0.75);
+        border: 1px solid #52795c;
+        border-radius: 6px;
+        z-index: 6;
+    }
+
+    .equip-display {
+        font-size: 10px;
+        margin-top: 2px;
+    }
+
+    /* Mobile Modals */
+    .inventory-ui {
+        width: 92% !important;
+        max-width: 480px;
+        max-height: 85vh;
+        max-height: 85dvh;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        position: fixed;
+        z-index: 100;
+        overflow-y: auto;
+    }
+}
+
+/* PORTRAIT MODE SPECIFICS */
+@media (hover: none) and (pointer: coarse) and (orientation: portrait), (max-width: 768px) and (orientation: portrait) {
+    .touch-controls {
+        bottom: max(10px, env(safe-area-inset-bottom));
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
     }
 
     .dpad-btn {
-        width: 44px;
-        height: 44px;
-        font-size: 16px;
+        width: 50px;
+        height: 50px;
+        font-size: 18px;
     }
 
     .touch-action-btn.primary {
-        width: 64px;
-        height: 64px;
-        font-size: 14px;
+        width: 72px;
+        height: 72px;
+        font-size: 15px;
     }
 
     .touch-action-btn {
+        width: 46px;
+        height: 46px;
+        font-size: 18px;
+    }
+}
+
+/* LANDSCAPE MODE SPECIFICS */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape), (max-height: 600px) and (orientation: landscape) {
+    .top-bar {
+        padding: max(2px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 2px max(12px, env(safe-area-inset-left));
+        min-height: 32px;
+    }
+
+    .top-bar h1 {
+        font-size: 12px;
+    }
+
+    .touch-controls {
+        bottom: max(6px, env(safe-area-inset-bottom));
+        left: max(12px, env(safe-area-inset-left));
+        right: max(12px, env(safe-area-inset-right));
+    }
+
+    .dpad-btn {
         width: 42px;
         height: 42px;
-        font-size: 18px;
+        font-size: 15px;
+    }
+
+    .touch-action-btn.primary {
+        width: 60px;
+        height: 60px;
+        font-size: 13px;
+    }
+
+    .touch-action-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+    }
+
+    .touch-actions {
+        gap: 6px;
+    }
+
+    .touch-sub-actions {
+        gap: 6px;
     }
 }
 
