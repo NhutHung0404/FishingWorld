@@ -4,6 +4,8 @@ export class Camera {
         this.worldWidth = worldWidth;
         this.worldHeight = worldHeight;
         this.lerpSpeed = lerpSpeed;
+        this.viewportWidth = canvas.width;
+        this.viewportHeight = canvas.height;
 
         this.x = 0;
         this.y = 0;
@@ -15,17 +17,24 @@ export class Camera {
         this.shakeOffsetY = 0;
     }
 
+    setViewport(width, height) {
+        if (width > 0 && height > 0) {
+            this.viewportWidth = width;
+            this.viewportHeight = height;
+        }
+    }
+
     getTargetPosition(target) {
-        const maxX = Math.max(0, this.worldWidth - this.canvas.width);
-        const maxY = Math.max(0, this.worldHeight - this.canvas.height);
+        const maxX = Math.max(0, this.worldWidth - this.viewportWidth);
+        const maxY = Math.max(0, this.worldHeight - this.viewportHeight);
 
         const targetX = Math.max(
             0,
-            Math.min(target.x - this.canvas.width / 2, maxX)
+            Math.min(target.x - this.viewportWidth / 2, maxX)
         );
         const targetY = Math.max(
             0,
-            Math.min(target.y - this.canvas.height / 2, maxY)
+            Math.min(target.y - this.viewportHeight / 2, maxY)
         );
 
         return { x: targetX, y: targetY };

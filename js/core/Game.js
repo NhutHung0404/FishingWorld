@@ -30,6 +30,9 @@ export class Game {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
         this.ctx.imageSmoothingEnabled = false;
+        this.logicalWidth = canvas.width;
+        this.logicalHeight = canvas.height;
+        this.dpr = 1;
 
         this.ui = ui;
         this.eventBus = eventBus || new EventBus();
@@ -145,6 +148,9 @@ export class Game {
         this._onBeforeUnload = () => {
             this.saveManager?.save(true);
         };
+        this._onResize = () => {
+            this.resizeCanvas();
+        };
     }
 
     async init() {
@@ -160,8 +166,39 @@ export class Game {
         this.syncHud();
         if (this.touchControls.isTouchDevice()) {
             this.touchControls.show();
+            this.resizeCanvas();
         }
         this.hud.showMessage("Chào mừng đến Fishing World! Nhấn E gần hồ để câu cá.");
+    }
+
+    resizeCanvas() {
+        if (!this.touchControls?.isTouchDevice()) return;
+        const rect = this.canvas.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const logicalWidth = Math.max(1, Math.round(rect.width));
+        const logicalHeight = Math.max(1, Math.round(rect.height));
+        const physicalWidth = Math.max(1, Math.round(logicalWidth * dpr));
+        const physicalHeight = Math.max(1, Math.round(logicalHeight * dpr));
+
+        if (
+            this.canvas.width !== physicalWidth ||
+            this.canvas.height !== physicalHeight ||
+            this.logicalWidth !== logicalWidth ||
+            this.logicalHeight !== logicalHeight ||
+            this.dpr !== dpr
+        ) {
+            this.canvas.width = physicalWidth;
+            this.canvas.height = physicalHeight;
+            this.logicalWidth = logicalWidth;
+            this.logicalHeight = logicalHeight;
+            this.dpr = dpr;
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            this.ctx.imageSmoothingEnabled = false;
+            this.camera.setViewport(logicalWidth, logicalHeight);
+            this.camera.follow(this.player, null, true);
+        }
     }
 
     bindEvents() {
@@ -225,6 +262,8 @@ export class Game {
 
         window.addEventListener("beforeunload", this._onBeforeUnload);
         window.addEventListener("pagehide", this._onBeforeUnload);
+        window.addEventListener("resize", this._onResize);
+        window.addEventListener("orientationchange", this._onResize);
     }
 
     serializeState() {
@@ -778,7 +817,8 @@ export class Game {
     }
 
     render() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        this.ctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
 
         const timePhase = this.timeManager.getPhase();
         const isNight = timePhase === "NIGHT" || timePhase === "DUSK";
@@ -819,8 +859,8 @@ export class Game {
         const lights = this.world.getLightSources(this.player, this.fishingSystem);
         this.lightingSystem.renderLighting(
             this.ctx,
-            this.canvas.width,
-            this.canvas.height,
+            this.logicalWidth,
+            this.logicalHeight,
             this.camera,
             ambientLight,
             lights
@@ -873,5 +913,7 @@ export class Game {
 
         window.removeEventListener("beforeunload", this._onBeforeUnload);
         window.removeEventListener("pagehide", this._onBeforeUnload);
+        window.removeEventListener("resize", this._onResize);
+        window.removeEventListener("orientationchange", this._onResize);
     }
 }
