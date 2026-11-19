@@ -915,6 +915,12 @@ canvas {
         height: 46px;
         font-size: 18px;
     }
+
+    .touch-sub-actions {
+        display: grid;
+        grid-template-columns: repeat(2, auto);
+        gap: 8px;
+    }
 }
 
 /* LANDSCAPE MODE SPECIFICS */
