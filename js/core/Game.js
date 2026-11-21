@@ -2,6 +2,7 @@ import { EventBus } from "./EventBus.js";
 import { GameState } from "./GameState.js";
 import { Camera } from "./Camera.js";
 import { Input } from "./Input.js";
+import { Renderer } from "./Renderer.js";
 import { World } from "../world/World.js";
 import { Player } from "../entities/Player.js";
 import { FishingRod } from "../fishing/FishingRod.js";
@@ -16,7 +17,10 @@ import { LightingSystem } from "../systems/LightingSystem.js";
 import { FishingUI } from "../ui/FishingUI.js";
 import { InventoryUI } from "../ui/InventoryUI.js";
 import { HUD } from "../ui/HUD.js";
-import { Phase3ModalsUI } from "../ui/Phase3ModalsUI.js";
+import { ShopUI } from "../ui/ShopUI.js";
+import { FishpediaUI } from "../ui/FishpediaUI.js";
+import { QuestUI } from "../ui/QuestUI.js";
+import { SettingsUI } from "../ui/SettingsUI.js";
 import { TouchControls } from "../ui/TouchControls.js";
 import { EquipmentSystem } from "../systems/EquipmentSystem.js";
 import { ProgressionSystem } from "../systems/ProgressionSystem.js";
@@ -28,11 +32,28 @@ import { ZONE_LABELS } from "../fishing/FishDatabase.js";
 export class Game {
     constructor({ canvas, ui, eventBus, authService, saveManager }) {
         this.canvas = canvas;
-        this.ctx = canvas.getContext("2d");
-        this.ctx.imageSmoothingEnabled = false;
-        this.logicalWidth = canvas.width;
-        this.logicalHeight = canvas.height;
-        this.dpr = 1;
+        this.renderer = new Renderer({
+            canvas: this.canvas,
+            update: (deltaTime) => this.update(deltaTime),
+            render: () => {
+                this.render();
+                this.input.update();
+            },
+            isTouchDevice: () => this.touchControls?.isTouchDevice(),
+            onResize: ({ logicalWidth, logicalHeight, dpr }) => {
+                this.logicalWidth = logicalWidth;
+                this.logicalHeight = logicalHeight;
+                this.dpr = dpr;
+                this.camera?.setViewport(logicalWidth, logicalHeight);
+                if (this.player) {
+                    this.camera?.follow(this.player, null, true);
+                }
+            }
+        });
+        this.ctx = this.renderer.ctx;
+        this.logicalWidth = this.renderer.logicalWidth;
+        this.logicalHeight = this.renderer.logicalHeight;
+        this.dpr = this.renderer.dpr;
 
         this.ui = ui;
         this.eventBus = eventBus || new EventBus();
@@ -88,22 +109,34 @@ export class Game {
             reelBtn: this.ui.reelBtn
         });
 
-        this.modalsUI = new Phase3ModalsUI({
-            shopModal: this.ui.shopModal,
-            shopGold: this.ui.shopGold,
-            shopBody: this.ui.shopBody,
-            closeShopBtn: this.ui.closeShop,
-            openShopBtn: this.ui.shopBtn,
-            fishpediaModal: this.ui.fishpediaModal,
-            fishpediaProgress: this.ui.fishpediaProgress,
-            fishpediaBody: this.ui.fishpediaBody,
-            closeFishpediaBtn: this.ui.closeFishpedia,
-            openFishpediaBtn: this.ui.fishpediaBtn,
-            questsModal: this.ui.questsModal,
-            questsBody: this.ui.questsBody,
-            closeQuestsBtn: this.ui.closeQuests,
-            openQuestsBtn: this.ui.questsBtn,
-            resetQuestsBtn: this.ui.resetQuestsBtn
+        this.shopUI = new ShopUI({
+            modal: this.ui.shopModal,
+            goldEl: this.ui.shopGold,
+            bodyEl: this.ui.shopBody,
+            closeBtn: this.ui.closeShop,
+            openBtn: this.ui.shopBtn
+        });
+
+        this.fishpediaUI = new FishpediaUI({
+            modal: this.ui.fishpediaModal,
+            progressEl: this.ui.fishpediaProgress,
+            bodyEl: this.ui.fishpediaBody,
+            closeBtn: this.ui.closeFishpedia,
+            openBtn: this.ui.fishpediaBtn
+        });
+
+        this.questUI = new QuestUI({
+            modal: this.ui.questsModal,
+            bodyEl: this.ui.questsBody,
+            closeBtn: this.ui.closeQuests,
+            openBtn: this.ui.questsBtn,
+            resetBtn: this.ui.resetQuestsBtn
+        });
+
+        this.settingsUI = new SettingsUI({
+            modal: this.ui.settingsModal,
+            closeBtn: this.ui.closeSettings,
+            openBtn: this.ui.settingsBtn
         });
 
         this.inventoryUI = new InventoryUI({
@@ -140,16 +173,11 @@ export class Game {
             totalSoldGold: 0
         };
 
-        this.rafId = null;
-        this.lastTime = 0;
         this.elapsedSec = 0;
         this.resultTimeout = null;
         this.unsubscribers = [];
         this._onBeforeUnload = () => {
             this.saveManager?.save(true);
-        };
-        this._onResize = () => {
-            this.resizeCanvas();
         };
     }
 
@@ -172,33 +200,7 @@ export class Game {
     }
 
     resizeCanvas() {
-        if (!this.touchControls?.isTouchDevice()) return;
-        const rect = this.canvas.getBoundingClientRect();
-        if (rect.width <= 0 || rect.height <= 0) return;
-
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const logicalWidth = Math.max(1, Math.round(rect.width));
-        const logicalHeight = Math.max(1, Math.round(rect.height));
-        const physicalWidth = Math.max(1, Math.round(logicalWidth * dpr));
-        const physicalHeight = Math.max(1, Math.round(logicalHeight * dpr));
-
-        if (
-            this.canvas.width !== physicalWidth ||
-            this.canvas.height !== physicalHeight ||
-            this.logicalWidth !== logicalWidth ||
-            this.logicalHeight !== logicalHeight ||
-            this.dpr !== dpr
-        ) {
-            this.canvas.width = physicalWidth;
-            this.canvas.height = physicalHeight;
-            this.logicalWidth = logicalWidth;
-            this.logicalHeight = logicalHeight;
-            this.dpr = dpr;
-            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            this.ctx.imageSmoothingEnabled = false;
-            this.camera.setViewport(logicalWidth, logicalHeight);
-            this.camera.follow(this.player, null, true);
-        }
+        return this.renderer.resizeCanvas();
     }
 
     bindEvents() {
@@ -211,19 +213,31 @@ export class Game {
 
         this.fishingUI.bindPressHandler(() => this.pressTimingButton());
 
-        this.modalsUI.bindEvents({
+        this.shopUI.bindEvents({
             onOpenShop: () => this.openShop(),
+            onCloseModal: () => this.closeAllModals(),
+            onShopAction: (action, id) => this.handleShopAction(action, id)
+        });
+
+        this.fishpediaUI.bindEvents({
             onOpenFishpedia: () => this.openFishpedia(),
+            onCloseModal: () => this.closeAllModals()
+        });
+
+        this.questUI.bindEvents({
             onOpenQuests: () => this.openQuests(),
             onCloseModal: () => this.closeAllModals(),
-            onShopAction: (action, id) => this.handleShopAction(action, id),
             onClaimQuest: (questId) => this.handleClaimQuest(questId),
             onResetQuests: () => {
                 if (this.questSystem.resetCompletedQuests()) {
-                    this.modalsUI.renderQuests(this.questSystem);
+                    this.questUI.render(this.questSystem);
                     this.saveManager?.save(false);
                 }
             }
+        });
+
+        this.settingsUI.bindEvents({
+            onCloseModal: () => this.closeAllModals()
         });
 
         this.unsubscribers.push(
@@ -232,8 +246,8 @@ export class Game {
                 if (this.inventoryUI.isOpen()) {
                     this.inventoryUI.render(this.inventory);
                 }
-                if (this.modalsUI.shopModal?.style.display === "block") {
-                    this.modalsUI.renderShop(this.shopSystem, this.equipment, this.inventory, this.progression);
+                if (this.shopUI.isOpen()) {
+                    this.shopUI.render(this.shopSystem, this.equipment, this.inventory, this.progression);
                 }
             }),
             this.eventBus.on("equipment:changed", (info) => {
@@ -262,8 +276,6 @@ export class Game {
 
         window.addEventListener("beforeunload", this._onBeforeUnload);
         window.addEventListener("pagehide", this._onBeforeUnload);
-        window.addEventListener("resize", this._onResize);
-        window.addEventListener("orientationchange", this._onResize);
     }
 
     serializeState() {
@@ -356,28 +368,11 @@ export class Game {
     }
 
     start() {
-        if (this.rafId !== null) return;
-        this.lastTime = performance.now();
-
-        const loop = (timestamp) => {
-            const deltaTime = Math.min((timestamp - this.lastTime) / 1000, 0.05);
-            this.lastTime = timestamp;
-
-            this.update(deltaTime);
-            this.render();
-            this.input.update();
-
-            this.rafId = requestAnimationFrame(loop);
-        };
-
-        this.rafId = requestAnimationFrame(loop);
+        this.renderer.start();
     }
 
     stop() {
-        if (this.rafId !== null) {
-            cancelAnimationFrame(this.rafId);
-            this.rafId = null;
-        }
+        this.renderer.stop();
     }
 
     update(deltaTime) {
@@ -426,7 +421,7 @@ export class Game {
         }
 
         if (this.input.isJustPressed("f")) {
-            if (this.modalsUI.shopModal?.style.display === "block") {
+            if (this.shopUI.isOpen()) {
                 this.closeAllModals();
             } else if (this.state === GameState.EXPLORING) {
                 if (this.world.isNearMerchant(this.player.x, this.player.y)) {
@@ -439,7 +434,7 @@ export class Game {
         }
 
         if (this.input.isJustPressed("p")) {
-            if (this.modalsUI.fishpediaModal?.style.display === "block") {
+            if (this.fishpediaUI.isOpen()) {
                 this.closeAllModals();
             } else if (this.state === GameState.EXPLORING) {
                 this.openFishpedia();
@@ -448,7 +443,7 @@ export class Game {
         }
 
         if (this.input.isJustPressed("q")) {
-            if (this.modalsUI.questsModal?.style.display === "block") {
+            if (this.questUI.isOpen()) {
                 this.closeAllModals();
             } else if (this.state === GameState.EXPLORING) {
                 this.openQuests();
@@ -459,7 +454,7 @@ export class Game {
         if (this.input.isJustPressed("escape")) {
             if (this.inventoryUI.isOpen()) {
                 this.closeInventory();
-            } else if (this.modalsUI.isAnyOpen()) {
+            } else if (this.isAnyModalOpen()) {
                 this.closeAllModals();
             } else if (this.state === GameState.FISHING_WAITING) {
                 this.resetFishing();
@@ -487,9 +482,21 @@ export class Game {
         }
     }
 
+    isAnyModalOpen() {
+        return (
+            this.shopUI.isOpen() ||
+            this.fishpediaUI.isOpen() ||
+            this.questUI.isOpen() ||
+            this.settingsUI.isOpen()
+        );
+    }
+
     openInventory() {
         if (this.inventoryUI.isOpen()) return;
-        this.modalsUI.closeAll();
+        this.shopUI.close();
+        this.fishpediaUI.close();
+        this.questUI.close();
+        this.settingsUI.close();
         if (this.state !== GameState.UI_MODAL) {
             this.previousStateBeforeModal = this.state;
         }
@@ -510,33 +517,45 @@ export class Game {
 
     openShop() {
         this.inventoryUI.close();
+        this.fishpediaUI.close();
+        this.questUI.close();
+        this.settingsUI.close();
         if (this.state !== GameState.UI_MODAL) {
             this.previousStateBeforeModal = this.state;
         }
         this.setState(GameState.UI_MODAL);
-        this.modalsUI.openShop(this.shopSystem, this.equipment, this.inventory, this.progression);
+        this.shopUI.open(this.shopSystem, this.equipment, this.inventory, this.progression);
     }
 
     openFishpedia() {
         this.inventoryUI.close();
+        this.shopUI.close();
+        this.questUI.close();
+        this.settingsUI.close();
         if (this.state !== GameState.UI_MODAL) {
             this.previousStateBeforeModal = this.state;
         }
         this.setState(GameState.UI_MODAL);
-        this.modalsUI.openFishpedia(this.fishpedia);
+        this.fishpediaUI.open(this.fishpedia);
     }
 
     openQuests() {
         this.inventoryUI.close();
+        this.shopUI.close();
+        this.fishpediaUI.close();
+        this.settingsUI.close();
         if (this.state !== GameState.UI_MODAL) {
             this.previousStateBeforeModal = this.state;
         }
         this.setState(GameState.UI_MODAL);
-        this.modalsUI.openQuests(this.questSystem);
+        this.questUI.open(this.questSystem);
     }
 
     closeAllModals() {
-        this.modalsUI.closeAll();
+        this.shopUI.close();
+        this.fishpediaUI.close();
+        this.questUI.close();
+        this.settingsUI.close();
         if (this.state === GameState.UI_MODAL && !this.inventoryUI.isOpen()) {
             this.setState(
                 this.previousStateBeforeModal === GameState.UI_MODAL
@@ -560,7 +579,7 @@ export class Game {
 
         if (res.message) this.hud.showMessage(res.message);
         if (res.success) {
-            this.modalsUI.renderShop(this.shopSystem, this.equipment, this.inventory, this.progression);
+            this.shopUI.render(this.shopSystem, this.equipment, this.inventory, this.progression);
             this.saveManager?.save(false);
         }
     }
@@ -572,7 +591,7 @@ export class Game {
         });
         if (res.success) {
             this.hud.showMessage(`🎁 Nhận thưởng: +${res.rewardGold}G, +${res.rewardXp} XP!`);
-            this.modalsUI.renderQuests(this.questSystem);
+            this.questUI.render(this.questSystem);
             this.saveManager?.save(false);
         }
     }
@@ -899,11 +918,15 @@ export class Game {
     }
 
     destroy() {
-        this.stop();
+        this.renderer.destroy();
         clearTimeout(this.resultTimeout);
         this.input.destroy();
         this.touchControls?.destroy();
         this.hud.destroy();
+        this.shopUI?.destroy();
+        this.fishpediaUI?.destroy();
+        this.questUI?.destroy();
+        this.settingsUI?.destroy();
         this.saveManager?.destroy();
 
         for (const unsubscribe of this.unsubscribers) {
@@ -913,7 +936,5 @@ export class Game {
 
         window.removeEventListener("beforeunload", this._onBeforeUnload);
         window.removeEventListener("pagehide", this._onBeforeUnload);
-        window.removeEventListener("resize", this._onResize);
-        window.removeEventListener("orientationchange", this._onResize);
     }
 }
